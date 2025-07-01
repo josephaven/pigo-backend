@@ -13,8 +13,6 @@ use Laravel\Sanctum\HasApiTokens;
 class User extends Authenticatable
 {
     use HasApiTokens;
-
-    /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory;
     use HasProfilePhoto;
     use Notifiable;
@@ -29,6 +27,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'rol_id',
+        'sucursal_id',
     ];
 
     /**
@@ -63,5 +63,21 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Relación con Rol
+     */
+    public function rol()
+    {
+        return $this->belongsTo(Rol::class);
+    }
+
+    /**
+     * Relación con Sucursal
+     */
+    public function sucursal()
+    {
+        return $this->belongsTo(Sucursal::class);
     }
 }
