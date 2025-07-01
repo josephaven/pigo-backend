@@ -1,48 +1,27 @@
 <x-guest-layout>
-    <x-authentication-card>
-        <x-slot name="logo">
-            <x-authentication-card-logo />
-        </x-slot>
-
-        <x-validation-errors class="mb-4" />
-
-        @session('status')
-            <div class="mb-4 font-medium text-sm text-green-600">
-                {{ $value }}
-            </div>
-        @endsession
-
-        <form method="POST" action="{{ route('login') }}">
-            @csrf
-
-            <div>
-                <x-label for="email" value="{{ __('Email') }}" />
-                <x-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus autocomplete="username" />
+    <div class="min-h-screen flex items-center justify-center bg-[#F8F8F9] font-[Poppins]">
+        <div class="bg-white px-8 py-10 rounded-xl shadow-md w-full max-w-sm">
+            <div class="flex justify-center mb-6">
+                <img src="{{ asset('img/logo-pigo.svg') }}" alt="Logotipo de PIGO" class="h-36 w-auto">
             </div>
 
-            <div class="mt-4">
-                <x-label for="password" value="{{ __('Password') }}" />
-                <x-input id="password" class="block mt-1 w-full" type="password" name="password" required autocomplete="current-password" />
-            </div>
+            <form method="POST" action="{{ route('login') }}">
+                @csrf
 
-            <div class="block mt-4">
-                <label for="remember_me" class="flex items-center">
-                    <x-checkbox id="remember_me" name="remember" />
-                    <span class="ms-2 text-sm text-gray-600">{{ __('Remember me') }}</span>
-                </label>
-            </div>
+                <div class="mb-4">
+                    <label for="email" class="block text-sm font-medium text-gray-700">Usuario</label>
+                    <input id="email" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-[#174F5C]/50" type="email" name="email" placeholder="Escribe tu usuario" required autofocus />
+                </div>
 
-            <div class="flex items-center justify-end mt-4">
-                @if (Route::has('password.request'))
-                    <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('password.request') }}">
-                        {{ __('Forgot your password?') }}
-                    </a>
-                @endif
+                <div class="mb-6">
+                    <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <input id="password" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm focus:ring focus:ring-[#174F5C]/50" type="password" name="password" placeholder="Escribe tu contraseña" required />
+                </div>
 
-                <x-button class="ms-4">
-                    {{ __('Log in') }}
-                </x-button>
-            </div>
-        </form>
-    </x-authentication-card>
+                <button type="submit" class="w-full bg-[#174F5C] text-white py-2 px-4 rounded-md hover:bg-[#143E47] transition-all">
+                    Iniciar sesión
+                </button>
+            </form>
+        </div>
+    </div>
 </x-guest-layout>
