@@ -34,6 +34,7 @@ class Kernel extends HttpKernel
     protected $routeMiddleware = [
         'auth' => \App\Http\Middleware\Authenticate::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
-        'rol' => \App\Http\Middleware\CheckRol::class, 
+        'rol' => \App\Http\Middleware\VerificarRol::class,
+ 
     ];
 }

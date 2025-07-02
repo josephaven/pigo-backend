@@ -6,7 +6,8 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class CheckRol
+class VerificarRol
+
 {
     /**
      * Handle an incoming request.
@@ -17,9 +18,10 @@ class CheckRol
     {
         $user = $request->user();
 
-        if (!$user || !in_array($user->rol->nombre, $roles)) {
+        if (!$user || !$user->rol || !in_array($user->rol->nombre, $roles)) {
             abort(403, 'No tienes permiso para acceder a esta sección.');
         }
+
 
         return $next($request);
     }
