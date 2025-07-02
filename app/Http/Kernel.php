@@ -31,10 +31,18 @@ class Kernel extends HttpKernel
         ],
     ];
 
-    protected $routeMiddleware = [
+    /**
+     * Middleware aliases available to the application.
+     *
+     * Laravel 12 uses the `$middlewareAliases` property instead of
+     * `$routeMiddleware` for registering route middleware. Using the
+     * old property causes the framework to be unaware of custom
+     * middleware and results in errors such as
+     * `Target class [rol] does not exist` when the alias is used.
+     */
+    protected $middlewareAliases = [
         'auth' => \App\Http\Middleware\Authenticate::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'rol' => \App\Http\Middleware\VerificarRol::class,
- 
     ];
 }
