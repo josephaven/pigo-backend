@@ -29,7 +29,10 @@ class User extends Authenticatable
         'password',
         'rol_id',
         'sucursal_id',
+        'salario',
+        'estado',
     ];
+
 
     /**
      * The attributes that should be hidden for serialization.
@@ -62,8 +65,10 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'estado' => 'boolean',
         ];
     }
+
 
     /**
      * Relación con Rol

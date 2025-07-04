@@ -5,16 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-class Rol extends Model
+class Sucursal extends Model
 {
     use HasFactory;
 
-    protected $table = 'roles'; // ✅ Esta línea fuerza la tabla correcta
+    protected $table = 'sucursales'; // ✅ Esta línea fuerza la tabla correcta
 
-    protected $fillable = ['nombre'];
+    protected $fillable = ['nombre', 'direccion', 'numero_whatsapp'];
 
     public function users()
     {
         return $this->hasMany(User::class);
     }
 }
+
+

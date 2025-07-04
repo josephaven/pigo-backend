@@ -1,7 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Ocultar elementos con x-cloak hasta que AlpineJS los procese */
 [x-cloak] {
     display: none;
+}
+
+/* Fuente global */
+body {
+    font-family: 'Poppins', sans-serif;
+}
+
+@layer components {
+    /* Estilo base de los enlaces del sidebar */
+    .sidebar-link {
+        @apply flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 text-white text-sm font-normal;
+    }
+
+    /* Hover y estado activo por defecto */
+    .sidebar-link:hover,
+    .sidebar-link.active {
+        @apply bg-white/10 text-[#FFFFFF];
+    }
+
+    /* Estilos para los íconos (SVGs de Lucide) */
+    .sidebar-link svg {
+        @apply w-5 h-5 min-w-[20px] stroke-white transition-colors duration-200;
+    }
+
+    /* Cambio de color al pasar mouse o estar activo */
+    .sidebar-link:hover svg,
+    .sidebar-link.active svg {
+        @apply stroke-[#FFFFFF];
+    }
+
+    /* Estilo especial para el botón de cerrar sesión */
+    .sidebar-link.logout {
+        @apply text-white;
+    }
+
+    .sidebar-link.logout:hover {
+        @apply text-red-400 bg-white/10;
+    }
+
+    .sidebar-link.logout svg {
+        @apply stroke-white transition-colors duration-200;
+    }
+
+    .sidebar-link.logout:hover svg {
+        @apply stroke-red-400;
+    }
 }

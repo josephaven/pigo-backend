@@ -1,25 +1,25 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-
-Route::get('/', function () {
-    return view('welcome');
-});
+use App\Livewire\Configuracion\Empleados;
+use App\Livewire\Configuracion\Sucursales;
+use App\Livewire\Configuracion\MetodosPago;
 
 Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-
-    // Ruta general
     Route::get('/dashboard', function () {
         return view('dashboard');
     })->name('dashboard');
 
-    // Ruta protegida solo para Jefe
     Route::get('/admin', function () {
         return 'Bienvenido Jefe';
     })->middleware('rol:Jefe');
-});
 
+    // ✅ EN LIVEWIRE v3 USAS DIRECTAMENTE LA CLASE
+    Route::get('/configuracion', Empleados::class)->name('configuracion.index');
+
+
+});
