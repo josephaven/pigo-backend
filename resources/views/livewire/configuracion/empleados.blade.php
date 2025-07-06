@@ -1,15 +1,32 @@
+@php($tabActivo = 'empleados')
+
+@section('title', 'Configuración')
+
+@section('tabs')
+    @include('components.config-tabs', ['tabActivo' => $tabActivo])
+@endsection
+
+@section('action')
+    <button
+        onclick="window.dispatchEvent(new CustomEvent('abrir-modal-empleado'))"
+        class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-[#002f39] transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Nuevo empleado
+    </button>
+@endsection
+
+
+
+
 <div class="p-4 sm:p-6 font-[Poppins]">
-    {{-- Encabezado --}}
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 class="text-3xl font-bold">Configuración</h1>
-        <button wire:click="abrirModal"
-                class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-[#002f39] transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-            Nuevo empleado
-        </button>
-    </div>
+    <script>
+        window.addEventListener('abrir-modal-empleado', () => {
+            Livewire.dispatch('abrirModalExterno');
+        });
+    </script>
+
 
     {{-- Filtros Responsivos --}}
     <div class="grid grid-cols-1 sm:grid-cols-6 gap-4 mb-4">

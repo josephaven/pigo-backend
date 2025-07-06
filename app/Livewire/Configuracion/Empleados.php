@@ -23,7 +23,8 @@ class Empleados extends Component
     public $modal_abierto = false;
     public $modalKey;
 
-    protected $listeners = ['cerrarModal'];
+    protected $listeners = ['cerrarModal', 'abrirModalExterno' => 'abrirModal'];
+
 
     public function mount()
     {

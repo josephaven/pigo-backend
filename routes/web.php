@@ -18,8 +18,14 @@ Route::middleware([
         return 'Bienvenido Jefe';
     })->middleware('rol:Jefe');
 
-    // ✅ EN LIVEWIRE v3 USAS DIRECTAMENTE LA CLASE
-    Route::get('/configuracion', Empleados::class)->name('configuracion.index');
+    // Submódulos de configuración
+    Route::prefix('configuracion')->name('configuracion.')->group(function () {
+        Route::get('/empleados', Empleados::class)->name('empleados');
+        Route::get('/sucursales', Sucursales::class)->name('sucursales');
+        Route::get('/metodos-pago', MetodosPago::class)->name('metodos-pago');
 
-
+        // También puedes redirigir /configuracion al submódulo de empleados por defecto:
+        Route::redirect('/', '/configuracion/empleados');
+    });
 });
+

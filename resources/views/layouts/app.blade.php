@@ -32,8 +32,32 @@
 
     {{-- Contenido principal --}}
     <main class="flex-1 p-4 sm:p-6 bg-gray-100">
+        {{-- Título principal --}}
+        @if(View::hasSection('title') || View::hasSection('action'))
+            <div class="flex justify-between items-center mb-4 sm:mb-6">
+            @hasSection('title')
+                    <h1 class="text-3xl font-bold">@yield('title')</h1>
+                @endif
+
+                @hasSection('action')
+                    <div>
+                        @yield('action')
+                    </div>
+                @endif
+            </div>
+        @endif
+
+        @hasSection('tabs')
+            <div class="mb-2">
+                @yield('tabs')
+            </div>
+        @endif
+
+
         {{ $slot }}
     </main>
+
+
 </div>
 
 @stack('modals')

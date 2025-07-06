@@ -11,12 +11,30 @@ class Sucursal extends Model
 
     protected $table = 'sucursales'; // ✅ Esta línea fuerza la tabla correcta
 
-    protected $fillable = ['nombre', 'direccion', 'numero_whatsapp'];
+    protected $fillable = [
+        'nombre',
+        'calle_numero',
+        'colonia',
+        'municipio',
+        'estado',
+        'telefono',
+        'fecha_apertura',
+        'numero_whatsapp',
+    ];
+
 
     public function users()
     {
         return $this->hasMany(User::class);
     }
+
+    // app/Models/Sucursal.php
+
+    public function empleados()
+    {
+        return $this->hasMany(User::class);
+    }
+
 }
 
 
