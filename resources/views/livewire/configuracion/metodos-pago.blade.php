@@ -20,7 +20,7 @@
 <div class="p-4 sm:p-6 font-[Poppins]">
     <script>
         window.addEventListener('abrir-modal-metodo', () => {
-            Livewire.dispatch('abrirModal');
+            Livewire.dispatch('abrirModalExterno');
         });
     </script>
 
@@ -30,9 +30,40 @@
             <div class="bg-white shadow rounded-lg p-6 flex flex-col justify-between space-y-3">
                 <div>
                     <h2 class="text-lg font-bold text-gray-800">{{ $metodo->nombre }}</h2>
-                    @if ($metodo->descripcion)
+
+                    @if($metodo->descripcion)
                         <p class="text-sm text-gray-600 mt-1">
-                            📝 {{ $metodo->descripcion }}
+                            <span class="font-medium text-gray-600">Descripción:</span> {{ $metodo->descripcion }}
+                        </p>
+                    @endif
+
+                    @if($metodo->tipo)
+                        <p class="text-sm text-gray-600 mt-1">
+                            <span class="font-medium text-gray-600">Tipo:</span> {{ ucfirst($metodo->tipo) }}
+                        </p>
+                    @endif
+
+                    @if($metodo->banco)
+                        <p class="text-sm text-gray-600 mt-1">
+                            <span class="font-medium text-gray-600">Banco:</span> {{ $metodo->banco }}
+                        </p>
+                    @endif
+
+                    @if($metodo->titular)
+                        <p class="text-sm text-gray-600 mt-1">
+                            <span class="font-medium text-gray-600">Titular:</span> {{ $metodo->titular }}
+                        </p>
+                    @endif
+
+                    @if($metodo->cuenta)
+                        <p class="text-sm text-gray-600 mt-1">
+                            <span class="font-medium text-gray-600">Cuenta:</span> {{ $metodo->cuenta }}
+                        </p>
+                    @endif
+
+                    @if($metodo->clabe)
+                        <p class="text-sm text-gray-600 mt-1">
+                            <span class="font-medium text-gray-600">CLABE:</span> {{ $metodo->clabe }}
                         </p>
                     @endif
                 </div>
@@ -55,23 +86,51 @@
 
     {{-- Modal --}}
     @if($modal_abierto)
-        <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+        <div wire:key="{{ $modalKey }}" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
             <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-xl mx-4">
                 <h2 class="text-xl sm:text-2xl font-bold mb-6">
                     {{ $modo_edicion ? 'Editar método de pago' : 'Nuevo método de pago' }}
                 </h2>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
                     <div class="sm:col-span-2">
                         <label class="block text-sm mb-1">Nombre</label>
-                        <input wire:model.defer="nombre" type="text"
-                               class="w-full border rounded-md px-3 py-2 text-sm" />
+                        <input wire:model.defer="nombre" type="text" class="w-full border rounded-md px-3 py-2 text-sm" />
                     </div>
+
                     <div class="sm:col-span-2">
                         <label class="block text-sm mb-1">Descripción (opcional)</label>
-                        <textarea wire:model.defer="descripcion"
-                                  class="w-full border rounded-md px-3 py-2 text-sm resize-none"
-                                  rows="3"></textarea>
+                        <textarea wire:model.defer="descripcion" class="w-full border rounded-md px-3 py-2 text-sm resize-none" rows="2"></textarea>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm mb-1">Tipo</label>
+                        <select wire:model.defer="tipo" class="w-full border rounded-md px-3 py-2 text-sm">
+                            <option value="efectivo">Efectivo</option>
+                            <option value="transferencia">Transferencia</option>
+                            <option value="terminal">Terminal</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm mb-1">Banco</label>
+                        <input wire:model.defer="banco" type="text" class="w-full border rounded-md px-3 py-2 text-sm" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm mb-1">Cuenta</label>
+                        <input wire:model.defer="cuenta" type="text" class="w-full border rounded-md px-3 py-2 text-sm" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm mb-1">CLABE</label>
+                        <input wire:model.defer="clabe" type="text" class="w-full border rounded-md px-3 py-2 text-sm" />
+                    </div>
+
+                    <div>
+                        <label class="block text-sm mb-1">Titular</label>
+                        <input wire:model.defer="titular" type="text" class="w-full border rounded-md px-3 py-2 text-sm" />
                     </div>
                 </div>
 

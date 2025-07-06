@@ -17,16 +17,12 @@
     </button>
 @endsection
 
-
-
-
 <div class="p-4 sm:p-6 font-[Poppins]">
     <script>
         window.addEventListener('abrir-modal-empleado', () => {
             Livewire.dispatch('abrirModalExterno');
         });
     </script>
-
 
     {{-- Filtros Responsivos --}}
     <div class="grid grid-cols-1 sm:grid-cols-6 gap-4 mb-4">

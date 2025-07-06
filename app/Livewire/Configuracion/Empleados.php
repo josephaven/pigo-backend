@@ -38,7 +38,7 @@ class Empleados extends Component
     public function render()
     {
         $empleados = User::with(['rol', 'sucursal'])
-            ->when($this->filtro_nombre, fn($q) => $q->where('name', 'like', '%' . $this->filtro_nombre . '%'))
+            ->when($this->filtro_nombre, fn($q) => $q->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($this->filtro_nombre) . '%']))
             ->when($this->filtro_rol, fn($q) => $q->where('rol_id', $this->filtro_rol))
             ->when($this->filtro_estado !== '', fn($q) => $q->where('estado', $this->filtro_estado))
             ->when($this->filtro_sucursal, fn($q) => $q->where('sucursal_id', $this->filtro_sucursal))

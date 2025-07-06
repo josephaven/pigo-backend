@@ -35,13 +35,13 @@
                         {{ $sucursal->municipio }}, {{ $sucursal->estado }}
                     </p>
                     <p class="text-sm text-gray-600 mt-1">
-                        📞 {{ $sucursal->telefono }}
+                        <span class="font-medium text-gray-600">Telefono:</span>{{ $sucursal->telefono }}
                     </p>
                     <p class="text-sm text-gray-600 mt-1">
-                        🗓️ Apertura: {{ \Carbon\Carbon::parse($sucursal->fecha_apertura)->format('d/m/Y') }}
+                        <span class="font-medium text-gray-600">Apertura:</span> {{ \Carbon\Carbon::parse($sucursal->fecha_apertura)->format('d/m/Y') }}
                     </p>
-                    <p class="text-sm text-gray-700 mt-1 font-medium">
-                        👥 Empleados: {{ $sucursal->empleados_count }}
+                    <p class="text-sm text-gray-600 mt-1">
+                        <span class="font-medium text-gray-600">Empleados: {{ $sucursal->empleados_count }}
                     </p>
                 </div>
 
