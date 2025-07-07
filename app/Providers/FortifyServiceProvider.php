@@ -15,6 +15,9 @@ use Laravel\Fortify\Actions\RedirectIfTwoFactorAuthenticatable;
 use Laravel\Fortify\Fortify;
 use Laravel\Fortify\Contracts\LogoutResponse;
 use App\Actions\Fortify\CustomLogoutResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
+
 
 class FortifyServiceProvider extends ServiceProvider
 {
@@ -36,6 +39,21 @@ class FortifyServiceProvider extends ServiceProvider
         Fortify::updateUserPasswordsUsing(UpdateUserPassword::class);
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::redirectUserForTwoFactorAuthenticationUsing(RedirectIfTwoFactorAuthenticatable::class);
+        Fortify::authenticateUsing(function ($request) {
+            $user = \App\Models\User::where('email', $request->email)->first();
+
+            if ($user && \Hash::check($request->password, $user->password)) {
+                if (!$user->estado) {
+                    throw ValidationException::withMessages([
+                        Fortify::username() => 'Tu cuenta está inactiva. Contacta al administrador.',
+                    ]);
+                }
+
+                return $user;
+            }
+
+            return null;
+        });
 
         RateLimiter::for('login', function (Request $request) {
             $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());

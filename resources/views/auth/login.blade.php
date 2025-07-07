@@ -5,6 +5,14 @@
                 <img src="{{ asset('img/logo-pigo.svg') }}" alt="Logotipo de PIGO" class="h-36 w-auto">
             </div>
 
+            {{-- Mensaje de error de cuenta desactivada u otro --}}
+            @if ($errors->any())
+                <div class="bg-red-100 text-red-800 border border-red-400 p-3 rounded mb-4 text-sm">
+                    {{ $errors->first() }}
+                </div>
+            @endif
+
+
             <form method="POST" action="{{ route('login') }}">
                 @csrf
 

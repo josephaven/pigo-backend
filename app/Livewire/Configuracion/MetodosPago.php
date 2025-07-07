@@ -76,10 +76,15 @@ class MetodosPago extends Component
             ]
         );
 
-        $this->dispatch('toast', [
-            'tipo' => 'success',
-            'mensaje' => 'Método de pago guardado correctamente'
-        ]);
+        $this->js(<<<'JS'
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    tipo: 'success',
+                    mensaje: "Método de pago guardado correctamente"
+                }
+            }));
+        JS);
+
 
         $this->cerrarModal();
     }
