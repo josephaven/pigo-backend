@@ -19,7 +19,9 @@
     {{-- Logo --}}
     <div>
         <div class="flex items-center justify-center mb-10">
-            <img src="{{ asset('img/logo-pigo-blanco.svg') }}" alt="PIGO" class="h-32 w-auto">
+            <img src="data:image/svg+xml;base64,{{ base64_encode(file_get_contents(public_path('img/logo-pigo-blanco.svg'))) }}"
+                 alt="PIGO" class="h-32 w-auto" />
+
         </div>
 
         {{-- Navegación --}}

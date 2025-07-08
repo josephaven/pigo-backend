@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Livewire\Configuracion\Empleados;
 use App\Livewire\Configuracion\Sucursales;
 use App\Livewire\Configuracion\MetodosPago;
+use App\Livewire\Clientes;
+
 
 Route::middleware([
     'auth:sanctum',
@@ -17,6 +19,9 @@ Route::middleware([
     Route::get('/admin', function () {
         return 'Bienvenido Jefe';
     })->middleware('rol:Jefe');
+
+    Route::get('/clientes', Clientes::class)->name('clientes');
+
 
     // Submódulos de configuración
     Route::prefix('configuracion')->name('configuracion.')->group(function () {
