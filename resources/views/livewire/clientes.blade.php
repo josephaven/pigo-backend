@@ -138,7 +138,10 @@
     {{-- Modal --}}
     @if($modal_abierto)
         <div wire:key="{{ $modalKey }}" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4">
+            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4"
+                 x-data
+                 @keydown.enter.prevent="$wire.guardar()">
+
                 <h2 class="text-xl sm:text-2xl font-bold mb-6">
                     {{ $modo_edicion ? 'Editar cliente' : 'Nuevo cliente' }}
                 </h2>
@@ -148,11 +151,13 @@
                         <label class="block text-sm mb-1">Nombre completo</label>
                         <input wire:model.defer="nombre_completo" type="text"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('nombre_completo') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
                     <div>
                         <label class="block text-sm mb-1">Teléfono</label>
                         <input wire:model.defer="telefono" type="text"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('telefono') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
                     <div>
                         <label class="block text-sm mb-1">Tipo</label>
@@ -161,6 +166,7 @@
                             <option value="Normal">Normal</option>
                             <option value="Maquilador">Maquilador</option>
                         </select>
+                        @error('tipo_cliente') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
                     <div>
                         <label class="block text-sm mb-1">Ocupación</label>
@@ -171,11 +177,13 @@
                                 <option value="{{ $ocu }}">
                             @endforeach
                         </datalist>
+                        @error('ocupacion') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
                     <div>
                         <label class="block text-sm mb-1">Fecha de nacimiento</label>
                         <input wire:model.defer="fecha_nacimiento" type="date"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('fecha_nacimiento') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
                 </div>
 
@@ -192,6 +200,7 @@
             </div>
         </div>
     @endif
+
 
     @include('components.toast')
 </div>

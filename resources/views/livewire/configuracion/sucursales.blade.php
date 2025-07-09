@@ -65,8 +65,11 @@
     @if($modal_abierto)
         <div wire:key="{{ $modalKey }}"
              class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4">
-                <h2 class="text-xl sm:text-2xl font-bold mb-6">
+            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4"
+                 x-data
+                 @keydown.enter.prevent="$wire.guardar()">
+
+            <h2 class="text-xl sm:text-2xl font-bold mb-6">
                     {{ $modo_edicion ? 'Editar sucursal' : 'Nueva sucursal' }}
                 </h2>
 
@@ -75,37 +78,51 @@
                         <label class="block text-sm mb-1">Nombre</label>
                         <input wire:model.defer="nombre" type="text"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('nombre') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
                         <label class="block text-sm mb-1">Calle y número</label>
                         <input wire:model.defer="calle_numero" type="text"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('calle_numero') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
                         <label class="block text-sm mb-1">Colonia</label>
                         <input wire:model.defer="colonia" type="text"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('colonia') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
                         <label class="block text-sm mb-1">Municipio</label>
                         <input wire:model.defer="municipio" type="text"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('municipio') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
                         <label class="block text-sm mb-1">Estado</label>
                         <input wire:model.defer="estado" type="text"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('estado') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
                         <label class="block text-sm mb-1">Teléfono</label>
                         <input wire:model.defer="telefono" type="text"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('telefono') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
                         <label class="block text-sm mb-1">Fecha de apertura</label>
                         <input wire:model.defer="fecha_apertura" type="date"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('fecha_apertura') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
                 </div>
 
                 <div class="mt-6 flex flex-col sm:flex-row justify-end gap-2">

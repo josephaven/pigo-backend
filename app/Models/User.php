@@ -31,6 +31,10 @@ class User extends Authenticatable
         'sucursal_id',
         'salario',
         'estado',
+        'telefono',
+        'direccion',
+        'rfc',
+
     ];
 
 

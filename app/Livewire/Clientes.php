@@ -65,12 +65,14 @@ class Clientes extends Component
         $this->limpiarFormulario();
         $this->modalKey = uniqid();
         $this->modal_abierto = true;
+        $this->resetErrorBag();
     }
 
     public function cerrarModal()
     {
         $this->modal_abierto = false;
         $this->limpiarFormulario();
+        $this->resetErrorBag();
     }
 
     public function limpiarFormulario()

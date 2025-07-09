@@ -128,7 +128,10 @@
     @if($modal_abierto)
         <div wire:key="{{ $modalKey }}"
              class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4">
+            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4"
+                 x-data
+                 @keydown.enter.prevent="$wire.guardar()">
+
                 <h2 class="text-xl sm:text-2xl font-bold mb-6">
                     {{ $modo_edicion ? 'Editar empleado' : 'Nuevo empleado' }}
                 </h2>
@@ -138,18 +141,29 @@
                         <label class="block text-sm mb-1">Nombre</label>
                         <input wire:model.defer="nombre" type="text"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('nombre') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
                         <label class="block text-sm mb-1">Usuario</label>
                         <input wire:model.defer="usuario" type="email"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('usuario') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
                         <label class="block text-sm mb-1">Contraseña</label>
                         <input wire:model.defer="password" type="password"
                                class="w-full border rounded-md px-3 py-2 text-sm"
                                placeholder="{{ $modo_edicion ? 'Dejar en blanco para no cambiar' : 'Escriba una nueva contraseña' }}" />
+                        @error('password')
+                        @if (!$modo_edicion || ($modo_edicion && $password))
+                            <span class="text-red-500 text-xs">{{ $message }}</span>
+                        @endif
+                        @enderror
+
                     </div>
+
                     <div>
                         <label class="block text-sm mb-1">Rol</label>
                         <select wire:model.defer="rol_id"
@@ -159,7 +173,9 @@
                                 <option value="{{ $rol->id }}">{{ $rol->nombre }}</option>
                             @endforeach
                         </select>
+                        @error('rol_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
                         <label class="block text-sm mb-1">Sucursal</label>
                         <select wire:model.defer="sucursal_id"
@@ -169,12 +185,37 @@
                                 <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
                             @endforeach
                         </select>
+                        @error('sucursal_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
                     <div>
                         <label class="block text-sm mb-1">Salario</label>
                         <input wire:model.defer="salario" type="number"
                                class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('salario') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
+
+                    <div>
+                        <label class="block text-sm mb-1">Teléfono</label>
+                        <input wire:model.defer="telefono" type="text"
+                               class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('telefono') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm mb-1">Dirección</label>
+                        <input wire:model.defer="direccion" type="text"
+                               class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('direccion') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm mb-1">RFC</label>
+                        <input wire:model.defer="rfc" type="text"
+                               class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('rfc') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
+                    </div>
+
                     <div>
                         <label class="block text-sm mb-1">Estado</label>
                         <select wire:model.defer="estado"
@@ -182,8 +223,10 @@
                             <option value="1">Activo</option>
                             <option value="0">Inactivo</option>
                         </select>
+                        @error('estado') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
                 </div>
+
 
                 <div class="mt-6 flex flex-col sm:flex-row justify-end gap-2">
                     <button wire:click="cerrarModal"

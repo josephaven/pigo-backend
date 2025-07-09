@@ -22,6 +22,8 @@ class Empleados extends Component
 
     public $modal_abierto = false;
     public $modalKey;
+    public $telefono, $direccion, $rfc;
+
 
     protected $listeners = ['cerrarModal', 'abrirModalExterno' => 'abrirModal'];
 
@@ -56,12 +58,16 @@ class Empleados extends Component
         $this->limpiarFormulario();
         $this->modalKey = uniqid();
         $this->modal_abierto = true;
+        $this->resetErrorBag();
+
     }
 
     public function cerrarModal()
     {
         $this->modal_abierto = false;
         $this->limpiarFormulario();
+        $this->resetErrorBag();
+
     }
 
     public function limpiarFormulario()
@@ -75,6 +81,10 @@ class Empleados extends Component
         $this->estado = '1';
         $this->empleado_id = null;
         $this->modo_edicion = false;
+        $this->telefono = '';
+        $this->direccion = '';
+        $this->rfc = '';
+
     }
 
     public function guardar()
@@ -88,7 +98,10 @@ class Empleados extends Component
             ],
             'rol_id' => ['required', 'exists:roles,id'],
             'sucursal_id' => ['required', 'exists:sucursales,id'],
-            'salario' => ['required', 'numeric'],
+            'salario' => ['required', 'numeric', 'min:0'],
+            'telefono' => ['nullable', 'digits:10'],
+            'direccion' => ['nullable', 'string', 'max:255'],
+            'rfc' => ['nullable', 'string', 'size:13'],
             'password' => $this->modo_edicion ? ['nullable', 'min:6'] : ['required', 'min:6'],
         ]);
 
@@ -103,6 +116,9 @@ class Empleados extends Component
                     'sucursal_id' => $this->sucursal_id,
                     'estado' => $this->estado === '1' || $this->estado === 1,
                     'salario' => $this->salario,
+                    'telefono' => $this->telefono,
+                    'direccion' => $this->direccion,
+                    'rfc' => $this->rfc,
                     'password' => $this->password
                         ? Hash::make($this->password)
                         : $empleado->password,
@@ -115,6 +131,9 @@ class Empleados extends Component
                     'sucursal_id' => $this->sucursal_id,
                     'estado' => $this->estado === '1' || $this->estado === 1,
                     'salario' => $this->salario,
+                    'telefono' => $this->telefono,
+                    'direccion' => $this->direccion,
+                    'rfc' => $this->rfc,
                     'password' => Hash::make($this->password),
                 ]);
             }
@@ -154,10 +173,13 @@ class Empleados extends Component
         $this->sucursal_id = $empleado->sucursal_id;
         $this->estado = $empleado->estado ? '1' : '0';
         $this->salario = $empleado->salario;
+        $this->telefono = $empleado->telefono;
+        $this->direccion = $empleado->direccion;
+        $this->rfc = $empleado->rfc;
         $this->modo_edicion = true;
-
         $this->modalKey = uniqid();
         $this->modal_abierto = true;
+
     }
 
     public function limpiarFiltros()

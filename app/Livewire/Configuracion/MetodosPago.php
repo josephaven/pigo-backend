@@ -34,12 +34,14 @@ class MetodosPago extends Component
         $this->limpiarFormulario();
         $this->modalKey = uniqid();
         $this->modal_abierto = true;
+        $this->resetErrorBag();
     }
 
     public function cerrarModal()
     {
         $this->modal_abierto = false;
         $this->limpiarFormulario();
+        $this->resetErrorBag();
     }
 
     public function limpiarFormulario()
@@ -55,7 +57,7 @@ class MetodosPago extends Component
     {
         $this->validate([
             'nombre' => 'required|string|max:255',
-            'tipo' => 'nullable|string|max:100',
+            'tipo' => 'required|string|in:Efectivo,Transferencia,Terminal',
             'descripcion' => 'nullable|string',
             'banco' => 'nullable|string|max:100',
             'cuenta' => 'nullable|string|max:100',

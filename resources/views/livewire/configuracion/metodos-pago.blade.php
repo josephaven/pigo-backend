@@ -85,9 +85,13 @@
     </div>
 
     {{-- Modal --}}
+    {{-- Modal --}}
     @if($modal_abierto)
         <div wire:key="{{ $modalKey }}" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-xl mx-4">
+            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-xl mx-4"
+                 x-data
+                 @keydown.enter.prevent="$wire.guardar()">
+
                 <h2 class="text-xl sm:text-2xl font-bold mb-6">
                     {{ $modo_edicion ? 'Editar método de pago' : 'Nuevo método de pago' }}
                 </h2>
@@ -97,11 +101,13 @@
                     <div class="sm:col-span-2">
                         <label class="block text-sm mb-1">Nombre</label>
                         <input wire:model.defer="nombre" type="text" class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('nombre') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="sm:col-span-2">
                         <label class="block text-sm mb-1">Descripción (opcional)</label>
                         <textarea wire:model.defer="descripcion" class="w-full border rounded-md px-3 py-2 text-sm resize-none" rows="2"></textarea>
+                        @error('descripcion') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="sm:col-span-2">
@@ -111,26 +117,31 @@
                             <option value="transferencia">Transferencia</option>
                             <option value="terminal">Terminal</option>
                         </select>
+                        @error('tipo') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
                     <div>
                         <label class="block text-sm mb-1">Banco</label>
                         <input wire:model.defer="banco" type="text" class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('banco') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
                     <div>
                         <label class="block text-sm mb-1">Cuenta</label>
                         <input wire:model.defer="cuenta" type="text" class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('cuenta') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
                     <div>
                         <label class="block text-sm mb-1">CLABE</label>
                         <input wire:model.defer="clabe" type="text" class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('clabe') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
 
                     <div>
                         <label class="block text-sm mb-1">Titular</label>
                         <input wire:model.defer="titular" type="text" class="w-full border rounded-md px-3 py-2 text-sm" />
+                        @error('titular') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
                     </div>
                 </div>
 
@@ -147,4 +158,5 @@
             </div>
         </div>
     @endif
+
 </div>
