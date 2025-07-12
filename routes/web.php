@@ -12,25 +12,18 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('dashboard');
-    })->name('dashboard');
-
-    Route::get('/admin', function () {
-        return 'Bienvenido Jefe';
-    })->middleware('rol:Jefe');
+    Route::get('/dashboard', fn() => view('dashboard'))->name('dashboard');
+    Route::get('/admin', fn() => 'Bienvenido Jefe')->middleware('rol:Jefe');
 
     Route::get('/clientes', Clientes::class)->name('clientes');
 
-
-    // Submódulos de configuración
+    // Configuración (igual que antes)
     Route::prefix('configuracion')->name('configuracion.')->group(function () {
-        Route::get('/empleados', Empleados::class)->name('empleados');
-        Route::get('/sucursales', Sucursales::class)->name('sucursales');
-        Route::get('/metodos-pago', MetodosPago::class)->name('metodos-pago');
-
-        // También puedes redirigir /configuracion al submódulo de empleados por defecto:
-        Route::redirect('/', '/configuracion/empleados');
+        Route::get('empleados', Empleados::class)->name('empleados');
+        Route::get('sucursales', Sucursales::class)->name('sucursales');
+        Route::get('metodos-pago', MetodosPago::class)->name('metodos-pago');
+        Route::redirect('', 'configuracion/empleados');
     });
-});
 
+
+});
