@@ -27,10 +27,10 @@
     {{-- Filtros Responsivos --}}
     <div class="grid grid-cols-1 sm:grid-cols-6 gap-4 mb-4">
         <input wire:model.defer="filtro_nombre" wire:key="{{ $filtroKey }}-nombre" type="text" placeholder="Nombre"
-               class="col-span-1 border rounded-md px-3 py-2 text-sm w-full" />
+               class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full" />
 
         <select wire:model.defer="filtro_rol" wire:key="{{ $filtroKey }}-rol"
-                class="col-span-1 border rounded-md px-3 py-2 text-sm w-full">
+                class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
             <option value="">Rol</option>
             @foreach ($roles as $rol)
                 <option value="{{ $rol->id }}">{{ $rol->nombre }}</option>
@@ -38,14 +38,14 @@
         </select>
 
         <select wire:model.defer="filtro_estado" wire:key="{{ $filtroKey }}-estado"
-                class="col-span-1 border rounded-md px-3 py-2 text-sm w-full">
+                class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
             <option value="">Estado</option>
             <option value="1">Activo</option>
             <option value="0">Inactivo</option>
         </select>
 
         <select wire:model.defer="filtro_sucursal" wire:key="{{ $filtroKey }}-sucursal"
-                class="col-span-1 border rounded-md px-3 py-2 text-sm w-full">
+                class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
             <option value="">Sucursal</option>
             @foreach ($sucursales as $sucursal)
                 <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>

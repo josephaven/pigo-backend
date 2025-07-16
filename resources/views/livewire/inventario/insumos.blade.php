@@ -1,0 +1,193 @@
+@php($tabActivo = 'insumos')
+
+@section('title', 'Inventario')
+
+@section('action')
+    <button
+        onclick="window.dispatchEvent(new CustomEvent('abrir-modal-insumo'))"
+        class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-[#002f39] transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Nuevo insumo
+    </button>
+@endsection
+
+
+<div class="p-4 sm:p-6 font-[Poppins]">
+    <script>
+        window.addEventListener('abrir-modal-insumo', () => {
+            Livewire.dispatch('abrirModalExterno');
+        });
+    </script>
+
+
+
+    {{-- Filtros --}}
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+        <input type="text" wire:model.defer="filtro_nombre" placeholder="Nombre"
+               class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+
+        <select wire:model.defer="filtro_categoria"
+                class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <option value="">Categoría</option>
+            @foreach($categorias as $categoria)
+                <option value="{{ $categoria->id }}">{{ $categoria->nombre }}</option>
+            @endforeach
+        </select>
+
+        <select wire:model.defer="filtro_alerta"
+                class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <option value="">Alertas</option>
+            <option value="normal">Normal</option>
+            <option value="bajo">Bajo stock</option>
+            <option value="sin">Sin stock</option>
+        </select>
+
+        <div class="flex gap-2">
+            <button wire:click="$refresh"
+                    class="bg-[#003844] text-white px-4 py-2 rounded-md text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-[#002f39] transition w-full sm:w-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m21 21-4.34-4.34" />
+                    <circle cx="11" cy="11" r="8" />
+                </svg>
+                Buscar
+            </button>
+            <button wire:click="limpiarFiltros"
+                    class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-gray-300 transition w-full sm:w-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m16 22-1-4" />
+                    <path d="M19 13.99a1 1 0 0 0 1-1V12a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v.99a1 1 0 0 0 1 1" />
+                    <path d="M5 14h14l1.973 6.767A1 1 0 0 1 20 22H4a1 1 0 0 1-.973-1.233z" />
+                    <path d="m8 22 1-4" />
+                </svg>
+                Limpiar
+            </button>
+        </div>
+    </div>
+
+    {{-- Tabla --}}
+    {{-- Tabla --}}
+    <div class="overflow-x-auto bg-white shadow rounded-lg">
+        <table class="min-w-full text-xs sm:text-sm text-left border-separate border-spacing-y-2">
+            <thead class="text-gray-600 bg-gray-100">
+            <tr>
+                <th class="px-4 py-2 font-semibold">Insumo</th>
+                <th class="px-4 py-2 font-semibold">Categoría</th>
+                <th class="px-4 py-2 font-semibold">Unidad</th>
+                <th class="px-4 py-2 font-semibold">Stock</th>
+                <th class="px-4 py-2 font-semibold">Alertas</th>
+                <th class="px-4 py-2 font-semibold text-right">Acciones</th>
+            </tr>
+            </thead>
+            <tbody>
+            @forelse($insumos as $insumo)
+                <tr class="bg-white shadow-sm rounded" wire:key="insumo-{{ $insumo->id }}">
+                    <td class="px-4 py-2">{{ $insumo->nombre }}</td>
+                    <td class="px-4 py-2">{{ $insumo->categoria->nombre ?? '-' }}</td>
+                    <td class="px-4 py-2">{{ $insumo->unidad_medida }}</td>
+                    <td class="px-4 py-2">--</td>
+                    <td class="px-4 py-2">
+                        <span class="px-3 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">Normal</span>
+                    </td>
+                    <td class="px-4 py-2">
+                        <div class="flex justify-end">
+                            <button wire:click="editar({{ $insumo->id }})"
+                                    class="bg-[#003844] text-white px-3 py-1 rounded-md hover:bg-[#002f39] text-xs flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
+                                     viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+                                     stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+                                    <path d="m15 5 4 4" />
+                                </svg>
+                                Editar
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-gray-400">No hay insumos registrados.</td>
+                </tr>
+            @endforelse
+            </tbody>
+        </table>
+    </div>
+
+
+    {{-- Modal separado --}}
+    @if($modal_abierto)
+        <div wire:key="modal-insumo" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+            <div class="bg-white rounded-xl w-full max-w-4xl mx-auto shadow-lg p-6 overflow-y-auto max-h-[95vh]"
+                 wire:keydown.enter.prevent="guardar">
+
+                <h2 class="text-xl font-semibold mb-4">
+                    {{ $modo_edicion ? 'Editar insumo' : 'Nuevo insumo' }}
+                </h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nombre</label>
+                        <input type="text" wire:model.defer="nombre"
+                               class="w-full px-3 py-2 border rounded-md text-sm" />
+                        @error('nombre') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Unidad de medida</label>
+                        <input type="text" wire:model.defer="unidad_medida"
+                               class="w-full px-3 py-2 border rounded-md text-sm" />
+                        @error('unidad_medida') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm font-medium text-gray-700">Descripción</label>
+                        <textarea wire:model.defer="descripcion" rows="2"
+                                  class="w-full px-3 py-2 border rounded-md text-sm"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Categoría</label>
+                        <select wire:model.defer="categoria_insumo_id"
+                                class="w-full px-3 py-2 border rounded-md text-sm">
+                            <option value="">Selecciona una</option>
+                            @foreach($categorias as $categoria)
+                                <option value="{{ $categoria->id }}">{{ $categoria->nombre }}</option>
+                            @endforeach
+                        </select>
+                        @error('categoria_insumo_id') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Stock mínimo</label>
+                        <input type="number" wire:model.defer="stock_minimo"
+                               class="w-full px-3 py-2 border rounded-md text-sm" />
+                    </div>
+
+                    <div class="sm:col-span-2 flex items-center gap-2 mt-2">
+                        <input type="checkbox" wire:model="tiene_variantes"
+                               id="tiene_variantes" class="rounded border-gray-300">
+                        <label for="tiene_variantes" class="text-sm text-gray-700">
+                            Este insumo tiene variantes (talla, color...)
+                        </label>
+                    </div>
+                </div>
+
+                {{-- Aquí se pueden expandir variantes y stock dinámico más adelante --}}
+
+                <div class="flex justify-end gap-2 mt-6">
+                    <button wire:click="cerrarModal"
+                            class="px-4 py-2 bg-gray-200 rounded-md text-sm hover:bg-gray-300">
+                        Cancelar
+                    </button>
+                    <button wire:click="guardar"
+                            class="px-4 py-2 bg-[#003844] text-white rounded-md text-sm hover:bg-[#002f39]">
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+</div>

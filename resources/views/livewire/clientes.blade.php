@@ -24,10 +24,10 @@
     {{-- Filtros --}}
     <div class="flex flex-wrap gap-4 mb-4 items-end">
         <input wire:model.defer="filtro_nombre" type="text" placeholder="Nombre"
-               class="border rounded-md px-3 py-2 text-sm w-[160px]" />
+               class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[160px]" />
 
         <select wire:model.defer="filtro_tipo"
-                class="border rounded-md px-3 py-2 text-sm w-[120px]">
+                class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[120px]">
             <option value="">Tipo</option>
             <option value="Normal">Normal</option>
             <option value="Frecuente">Frecuente</option>
@@ -35,13 +35,13 @@
         </select>
 
         <input wire:model.defer="filtro_telefono" type="text" placeholder="Teléfono"
-               class="border rounded-md px-3 py-2 text-sm w-[120px]" />
+               class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[120px]" />
 
         <input wire:model.defer="filtro_ocupacion" type="text" placeholder="Ocupación"
-               class="border rounded-md px-3 py-2 text-sm w-[160px]" />
+               class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[160px]" />
 
         <select wire:model.defer="filtro_mes_nacimiento"
-                class="border rounded-md px-3 py-2 text-sm w-[155px]">
+                class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[155px]">
             <option value="">Mes nacimiento</option>
             <option value="01">Enero</option>
             <option value="02">Febrero</option>
@@ -58,7 +58,7 @@
         </select>
 
         <select wire:model.defer="filtro_anio_nacimiento"
-                class="border rounded-md px-3 py-2 text-sm w-[150px]">
+                class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[150px]">
             <option value="">Año nacimiento</option>
             @for ($a = now()->year; $a >= 1950; $a--)
                 <option value="{{ $a }}">{{ $a }}</option>
