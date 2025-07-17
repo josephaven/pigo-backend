@@ -6,6 +6,9 @@ use App\Livewire\Configuracion\Sucursales;
 use App\Livewire\Configuracion\MetodosPago;
 use App\Livewire\Clientes;
 use App\Livewire\Inventario\Insumos;
+use App\Livewire\Inventario\Traslados;
+use App\Livewire\Inventario\Mermas;
+use App\Livewire\Inventario\Categorias;
 
 Route::middleware([
     'auth:sanctum',
@@ -32,6 +35,11 @@ Route::middleware([
 
     // Módulo Inventario
     Route::get('/inventario', Insumos::class)->name('inventario.insumos');
+    Route::get('/inventario/traslados', Traslados::class)->name('inventario.traslados');
+    Route::get('/inventario/mermas', Mermas::class)->name('inventario.mermas');
+    Route::get('/inventario/categorias', Categorias::class)->name('inventario.categorias');
+
+
 
     // Aquí puedes agregar otras rutas por módulo en el futuro...
 });
