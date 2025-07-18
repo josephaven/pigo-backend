@@ -37,6 +37,8 @@ return new class extends Migration
                 ['sucursal_id', 'insumo_id', 'variante_insumo_id'],
                 'stock_sucursal_unico'
             );
+            $table->timestamps(); // esto agrega created_at y updated_at
+
         });
 
         // Opcional: fuerza que solo uno de los dos FK esté presente
