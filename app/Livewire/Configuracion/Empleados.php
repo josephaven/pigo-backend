@@ -123,6 +123,9 @@ class Empleados extends Component
                         ? Hash::make($this->password)
                         : $empleado->password,
                 ]);
+                $tipoToast = 'info';
+                $mensajeToast = 'Empleado actualizado correctamente';
+
             } else {
                 User::create([
                     'name' => $this->nombre,
@@ -136,13 +139,16 @@ class Empleados extends Component
                     'rfc' => $this->rfc,
                     'password' => Hash::make($this->password),
                 ]);
+                $tipoToast = 'success';
+                $mensajeToast = 'Empleado creado correctamente';
             }
 
-            $this->js(<<<'JS'
+
+            $this->js(<<<JS
                 window.dispatchEvent(new CustomEvent('toast', {
                     detail: {
-                        tipo: 'success',
-                        mensaje: "Empleado guardado correctamente"
+                        tipo: "$tipoToast",
+                        mensaje: "$mensajeToast"
                     }
                 }));
             JS);

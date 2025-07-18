@@ -44,20 +44,50 @@ class Categorias extends Component
     {
         $this->validate();
 
-        if ($this->modo_edicion && $this->categoria_id) {
-            CategoriaInsumo::findOrFail($this->categoria_id)->update([
-                'nombre' => $this->nombre,
-                'descripcion' => $this->descripcion,
-            ]);
-        } else {
-            CategoriaInsumo::create([
-                'nombre' => $this->nombre,
-                'descripcion' => $this->descripcion,
-            ]);
-        }
+        try {
+            $esEdicion = $this->modo_edicion && $this->categoria_id;
 
-        $this->cerrarModal();
+            if ($esEdicion) {
+                CategoriaInsumo::findOrFail($this->categoria_id)->update([
+                    'nombre' => $this->nombre,
+                    'descripcion' => $this->descripcion,
+                ]);
+            } else {
+                CategoriaInsumo::create([
+                    'nombre' => $this->nombre,
+                    'descripcion' => $this->descripcion,
+                ]);
+            }
+
+            $tipoToast = $esEdicion ? 'info' : 'success';
+            $mensajeToast = $esEdicion
+                ? 'Categoría actualizada correctamente'
+                : 'Categoría creada correctamente';
+
+            $this->js(<<<JS
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    tipo: "$tipoToast",
+                    mensaje: "$mensajeToast"
+                }
+            }));
+        JS);
+
+            $this->cerrarModal();
+        } catch (\Exception $e) {
+            \Log::error('Error al guardar categoría: ' . $e->getMessage());
+
+            $this->js(<<<JS
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    tipo: 'error',
+                    mensaje: "Ocurrió un error al guardar la categoría."
+                }
+            }));
+        JS);
+        }
     }
+
 
     public function editar($id)
     {

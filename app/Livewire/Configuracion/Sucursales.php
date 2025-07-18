@@ -72,52 +72,51 @@ class Sucursales extends Component
         ]);
 
         try {
-            if ($this->modo_edicion && $this->sucursal_id) {
-                $sucursal = Sucursal::findOrFail($this->sucursal_id);
-                $sucursal->update([
-                    'nombre' => $this->nombre,
-                    'calle_numero' => $this->calle_numero,
-                    'colonia' => $this->colonia,
-                    'municipio' => $this->municipio,
-                    'estado' => $this->estado,
-                    'telefono' => $this->telefono,
-                    'fecha_apertura' => $this->fecha_apertura,
-                ]);
-            } else {
-                Sucursal::create([
-                    'nombre' => $this->nombre,
-                    'calle_numero' => $this->calle_numero,
-                    'colonia' => $this->colonia,
-                    'municipio' => $this->municipio,
-                    'estado' => $this->estado,
-                    'telefono' => $this->telefono,
-                    'fecha_apertura' => $this->fecha_apertura,
-                ]);
-            }
+            $esEdicion = $this->sucursal_id !== null;
 
-            $this->js(<<<'JS'
-                window.dispatchEvent(new CustomEvent('toast', {
-                    detail: {
-                        tipo: 'success',
-                        mensaje: "Sucursal guardada correctamente"
-                    }
-                }));
-            JS);
+            Sucursal::updateOrCreate(
+                ['id' => $this->sucursal_id],
+                [
+                    'nombre' => $this->nombre,
+                    'calle_numero' => $this->calle_numero,
+                    'colonia' => $this->colonia,
+                    'municipio' => $this->municipio,
+                    'estado' => $this->estado,
+                    'telefono' => $this->telefono,
+                    'fecha_apertura' => $this->fecha_apertura,
+                ]
+            );
+
+            $tipoToast = $esEdicion ? 'info' : 'success';
+            $mensajeToast = $esEdicion
+                ? 'Sucursal actualizada correctamente'
+                : 'Sucursal creada correctamente';
+
+            $this->js(<<<JS
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    tipo: "$tipoToast",
+                    mensaje: "$mensajeToast"
+                }
+            }));
+        JS);
 
             $this->cerrarModal();
+
         } catch (\Exception $e) {
             \Log::error('Error al guardar sucursal: ' . $e->getMessage());
 
-            $this->js(<<<'JS'
-                window.dispatchEvent(new CustomEvent('toast', {
-                    detail: {
-                        tipo: 'error',
-                        mensaje: "Ocurrió un error al guardar. Intenta nuevamente."
-                    }
-                }));
-            JS);
+            $this->js(<<<JS
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    tipo: "error",
+                    mensaje: "Ocurrió un error al guardar. Intenta nuevamente."
+                }
+            }));
+        JS);
         }
     }
+
 
     public function editar($id)
     {

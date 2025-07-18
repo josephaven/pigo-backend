@@ -106,37 +106,43 @@ class Clientes extends Component
         ];
 
         try {
-            if ($this->modo_edicion && $this->cliente_id) {
+            $esEdicion = $this->modo_edicion && $this->cliente_id;
+
+            if ($esEdicion) {
                 Cliente::findOrFail($this->cliente_id)->update($data);
             } else {
                 Cliente::create($data);
             }
 
-            $this->js(<<<'JS'
-                window.dispatchEvent(new CustomEvent('toast', {
-                    detail: {
-                        tipo: 'success',
-                        mensaje: "Cliente guardado correctamente"
-                    }
-                }));
-            JS
-            );
+            $tipoToast = $esEdicion ? 'info' : 'success';
+            $mensajeToast = $esEdicion
+                ? 'Cliente actualizado correctamente'
+                : 'Cliente creado correctamente';
+
+            $this->js(<<<JS
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    tipo: "$tipoToast",
+                    mensaje: "$mensajeToast"
+                }
+            }));
+        JS);
 
             $this->cerrarModal();
         } catch (\Exception $e) {
             \Log::error('Error al guardar cliente: ' . $e->getMessage());
 
-            $this->js(<<<'JS'
-                window.dispatchEvent(new CustomEvent('toast', {
-                    detail: {
-                        tipo: 'error',
-                        mensaje: "Ocurrió un error al guardar. Intenta nuevamente."
-                    }
-                }));
-            JS
-            );
+            $this->js(<<<JS
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    tipo: 'error',
+                    mensaje: "Ocurrió un error al guardar. Intenta nuevamente."
+                }
+            }));
+        JS);
         }
     }
+
 
     public function editar($id)
     {

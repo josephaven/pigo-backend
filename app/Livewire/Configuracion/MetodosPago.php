@@ -65,31 +65,52 @@ class MetodosPago extends Component
             'titular' => 'nullable|string|max:255',
         ]);
 
-        MetodoPago::updateOrCreate(
-            ['id' => $this->metodo_id],
-            [
-                'nombre' => $this->nombre,
-                'tipo' => $this->tipo,
-                'descripcion' => $this->descripcion,
-                'banco' => $this->banco,
-                'cuenta' => $this->cuenta,
-                'clabe' => $this->clabe,
-                'titular' => $this->titular
-            ]
-        );
+        try {
+            $esEdicion = $this->metodo_id !== null;
 
-        $this->js(<<<'JS'
+            MetodoPago::updateOrCreate(
+                ['id' => $this->metodo_id],
+                [
+                    'nombre' => $this->nombre,
+                    'tipo' => $this->tipo,
+                    'descripcion' => $this->descripcion,
+                    'banco' => $this->banco,
+                    'cuenta' => $this->cuenta,
+                    'clabe' => $this->clabe,
+                    'titular' => $this->titular
+                ]
+            );
+
+            $tipoToast = $esEdicion ? 'info' : 'success';
+            $mensajeToast = $esEdicion
+                ? 'Método de pago actualizado correctamente'
+                : 'Método de pago creado correctamente';
+
+            $this->js(<<<JS
             window.dispatchEvent(new CustomEvent('toast', {
                 detail: {
-                    tipo: 'success',
-                    mensaje: "Método de pago guardado correctamente"
+                    tipo: "$tipoToast",
+                    mensaje: "$mensajeToast"
                 }
             }));
         JS);
 
+            $this->cerrarModal();
 
-        $this->cerrarModal();
+        } catch (\Exception $e) {
+            \Log::error('Error al guardar método de pago: ' . $e->getMessage());
+
+            $this->js(<<<JS
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    tipo: "error",
+                    mensaje: "Ocurrió un error al guardar. Intenta nuevamente."
+                }
+            }));
+        JS);
+        }
     }
+
 
     public function editar($id)
     {
