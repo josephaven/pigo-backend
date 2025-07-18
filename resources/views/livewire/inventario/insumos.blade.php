@@ -2,6 +2,10 @@
 
 @section('title', 'Inventario')
 
+@section('tabs')
+    @include('components.inventario-tabs', ['tabActivo' => $tabActivo])
+@endsection
+
 @section('action')
     <button
         onclick="window.dispatchEvent(new CustomEvent('abrir-modal-insumo'))"
@@ -88,10 +92,26 @@
                     <td class="px-4 py-2">{{ $insumo->nombre }}</td>
                     <td class="px-4 py-2">{{ $insumo->categoria->nombre ?? '-' }}</td>
                     <td class="px-4 py-2">{{ $insumo->unidad_medida }}</td>
-                    <td class="px-4 py-2">--</td>
                     <td class="px-4 py-2">
-                        <span class="px-3 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">Normal</span>
+                        {{ (int) $insumo->stock_de_sucursal }}
                     </td>
+                    <td class="px-4 py-2">
+                        @switch($insumo->alerta_stock)
+                            @case('Sin stock')
+                                <span class="px-3 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded-full">Sin stock</span>
+                                @break
+
+                            @case('Bajo stock')
+                                <span class="px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">Bajo stock</span>
+                                @break
+
+                            @default
+                                <span class="px-3 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">Normal</span>
+                        @endswitch
+                    </td>
+
+
+
                     <td class="px-4 py-2">
                         <div class="flex justify-end">
                             <button wire:click="editar({{ $insumo->id }})"
@@ -118,8 +138,9 @@
 
 
     {{-- Modal separado --}}
+    {{-- Modal separado --}}
     @if($modal_abierto)
-        <div wire:key="modal-insumo" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div wire:key="modal-insumo-{{ $filtroKey }}" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
             <div class="bg-white rounded-xl w-full max-w-4xl mx-auto shadow-lg p-6 overflow-y-auto max-h-[95vh]"
                  wire:keydown.enter.prevent="guardar">
 
@@ -160,14 +181,10 @@
                         @error('categoria_insumo_id') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Stock mínimo</label>
-                        <input type="number" wire:model.defer="stock_minimo"
-                               class="w-full px-3 py-2 border rounded-md text-sm" />
-                    </div>
+
 
                     <div class="sm:col-span-2 flex items-center gap-2 mt-2">
-                        <input type="checkbox" wire:model="tiene_variantes"
+                        <input type="checkbox" wire:model.lazy="tiene_variantes"
                                id="tiene_variantes" class="rounded border-gray-300">
                         <label for="tiene_variantes" class="text-sm text-gray-700">
                             Este insumo tiene variantes (talla, color...)
@@ -175,7 +192,123 @@
                     </div>
                 </div>
 
-                {{-- Aquí se pueden expandir variantes y stock dinámico más adelante --}}
+                @if(!$tiene_variantes)
+                    <div class="sm:col-span-2 mt-4">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Stock por sucursal</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            @foreach($sucursales as $sucursal)
+                                <div>
+                                    <label class="block text-xs text-gray-600 mb-1">{{ $sucursal->nombre }}</label>
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-xs text-gray-500 mb-0.5">{{ $sucursal->nombre }} (Stock actual)</label>
+                                            <input type="number"
+                                                   wire:model.defer="stockInicial.{{ $sucursal->id }}"
+                                                   class="w-full px-2 py-1 border rounded-md text-sm"
+                                                   min="0" placeholder="0" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-500 mb-0.5">{{ $sucursal->nombre }} (Stock mínimo)</label>
+                                            <input type="number"
+                                                   wire:model.defer="stockMinimoPorSucursal.{{ $sucursal->id }}"
+                                                   class="w-full px-2 py-1 border rounded-md text-sm"
+                                                   min="0" placeholder="0" />
+                                        </div>
+                                    </div>
+
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if($tiene_variantes)
+                    <div class="mt-6 space-y-4">
+                        <h3 class="text-sm font-semibold text-gray-700">Atributos de variantes</h3>
+                        <div class="space-y-2">
+                            @foreach ($atributos as $index => $nombreAtributo)
+                                <div class="mb-4 border p-3 rounded bg-gray-50">
+                                    <div class="flex justify-between items-center mb-2">
+                                        <input type="text" wire:model="atributos.{{ $index }}"
+                                               placeholder="Nombre del atributo"
+                                               class="w-full px-3 py-1 border rounded text-sm mr-2" />
+                                        <button type="button" class="text-sm text-red-600"
+                                                wire:click="eliminarAtributo({{ $index }})">
+                                            Eliminar
+                                        </button>
+                                    </div>
+
+                                    @if (isset($atributos[$index]) && strlen($atributos[$index]) > 0)
+                                        <div class="space-y-2" wire:key="atributo-{{ $index }}-{{ $atributos[$index] }}">
+                                            @foreach ($valoresAtributos[$atributos[$index]] ?? [] as $valIndex => $valor)
+                                                <div class="flex items-center gap-2">
+                                                    <input type="text"
+                                                           wire:model="valoresAtributos.{{ $atributos[$index] }}.{{ $valIndex }}"
+                                                           class="w-full px-2 py-1 border rounded text-sm" />
+                                                    <button type="button"
+                                                            wire:click="eliminarValor('{{ $atributos[$index] }}', {{ $valIndex }})"
+                                                            class="text-xs text-red-600 hover:underline">
+                                                        Eliminar
+                                                    </button>
+                                                </div>
+                                            @endforeach
+
+                                                <button type="button"
+                                                        class="text-blue-600 text-sm hover:underline"
+                                                        wire:click="agregarValorPorIndice({{ $index }})">
+                                                    + Agregar valor a {{ $atributos[$index] ?? 'Atributo ' . ($index + 1) }}
+                                                </button>
+
+                                        </div>
+                                    @endif
+
+                                </div>
+                            @endforeach
+
+                            <button type="button" wire:click="agregarAtributo"
+                                    class="mt-2 text-sm px-3 py-1 bg-gray-100 rounded hover:bg-gray-200 transition">
+                                + Agregar atributo
+                            </button>
+                        </div>
+
+                        <hr class="my-4" />
+
+                        <h3 class="text-sm font-semibold text-gray-700">Combinaciones</h3>
+
+                        @foreach($combinaciones as $index => $combo)
+                            <div class="border rounded-md p-3 bg-gray-50 space-y-2" wire:key="combo-{{ $index }}">
+                                <div class="grid grid-cols-2 sm:grid-cols-{{ count($combo) }} gap-2">
+                                    @foreach($combo as $clave => $valor)
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-600">{{ ucfirst($clave) }}</label>
+                                            <input type="text" value="{{ $valor }}" class="w-full px-2 py-1 border rounded-md text-sm bg-gray-100" disabled>
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    @foreach($sucursales as $sucursal)
+                                        <div>
+                                            <label class="block text-xs text-gray-500 mb-0.5">{{ $sucursal->nombre }} (Stock actual)</label>
+                                            <input type="number"
+                                                   wire:model.defer="stockPorVariante.{{ $index }}.{{ $sucursal->id }}"
+                                                   class="w-full px-2 py-1 border rounded-md text-sm"
+                                                   min="0" placeholder="0" />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-500 mb-0.5">{{ $sucursal->nombre }} (Stock mínimo)</label>
+                                            <input type="number"
+                                                   wire:model.defer="stockMinimoPorVariante.{{ $index }}.{{ $sucursal->id }}"
+                                                   class="w-full px-2 py-1 border rounded-md text-sm"
+                                                   min="0" placeholder="0" />
+                                        </div>
+                                    @endforeach
+                                </div>
+
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
 
                 <div class="flex justify-end gap-2 mt-6">
                     <button wire:click="cerrarModal"
@@ -190,4 +323,5 @@
             </div>
         </div>
     @endif
+
 </div>
