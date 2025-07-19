@@ -65,6 +65,7 @@ class Insumos extends Component
             'insumos' => $insumos,
             'categorias' => CategoriaInsumo::all(),
             'sucursales' => Sucursal::all(),
+            'unidadesExistentes' => $this->unidadesExistentes,
         ])->layout('layouts.app');
     }
 
@@ -88,24 +89,82 @@ class Insumos extends Component
     {
         $insumo = Insumo::findOrFail($id);
 
-
         $this->insumo_id = $id;
         $this->nombre = $insumo->nombre;
         $this->descripcion = $insumo->descripcion;
         $this->unidad_medida = $insumo->unidad_medida;
         $this->categoria_insumo_id = $insumo->categoria_insumo_id;
         $this->tiene_variantes = $insumo->tiene_variantes;
-        if (!$insumo->tiene_variantes) {
-            $stockSucursales = $insumo->stockSucursales;
 
+        // Limpiar estados previos
+        $this->stockInicial = [];
+        $this->stockMinimoPorSucursal = [];
+        $this->stockPorVariante = [];
+        $this->stockMinimoPorVariante = [];
+
+        if ($insumo->tiene_variantes) {
+            $variantes = $insumo->variantes;
+
+            $atributosTemp = [];
+            $valoresAtributosTemp = [];
+            $combinacionesTemp = [];
+
+            // Primera pasada: recolectar atributos, valores y combinaciones
+            foreach ($variantes as $variante) {
+                $atributos = is_array($variante->atributos)
+                    ? $variante->atributos
+                    : json_decode($variante->atributos, true);
+
+                $combinacionesTemp[] = $atributos;
+
+                foreach ($atributos as $nombre => $valor) {
+                    if (!in_array($nombre, $atributosTemp)) {
+                        $atributosTemp[] = $nombre;
+                    }
+                    $valoresAtributosTemp[$nombre][] = $valor;
+                }
+            }
+
+            // Eliminar duplicados en valores
+            foreach ($valoresAtributosTemp as $key => $valores) {
+                $valoresAtributosTemp[$key] = array_values(array_unique($valores));
+            }
+
+            $this->atributos = $atributosTemp;
+            $this->valoresAtributos = $valoresAtributosTemp;
+            $this->combinaciones = $combinacionesTemp;
+
+            // Segunda pasada: asignar stock a la combinación correspondiente
+            foreach ($variantes as $variante) {
+                $atributos = is_array($variante->atributos)
+                    ? $variante->atributos
+                    : json_decode($variante->atributos, true);
+
+                $index = collect($this->combinaciones)->search(function ($combo) use ($atributos) {
+                    return collect($combo)->diffAssoc($atributos)->isEmpty()
+                        && collect($atributos)->diffAssoc($combo)->isEmpty();
+                });
+
+                if ($index === false) continue;
+
+                foreach ($variante->stockSucursales as $stock) {
+                    $this->stockPorVariante[$index][$stock->sucursal_id] = $stock->cantidad_actual;
+                    $this->stockMinimoPorVariante[$index][$stock->sucursal_id] = $stock->stock_minimo;
+                }
+            }
+
+        } else {
+            // Insumo sin variantes: precargar stock normal
+            $stockSucursales = $insumo->stockSucursales;
             $this->stockInicial = $stockSucursales->pluck('cantidad_actual', 'sucursal_id')->toArray();
             $this->stockMinimoPorSucursal = $stockSucursales->pluck('stock_minimo', 'sucursal_id')->toArray();
         }
+
         $this->modo_edicion = true;
         $this->modal_abierto = true;
-
-        // No cargamos variantes ni stock para edición aún (opcional si se desea)
     }
+
+
 
     public function guardar()
     {
@@ -360,6 +419,16 @@ class Insumos extends Component
         $this->atributos = array_values($this->atributos);
 
         $this->generarCombinaciones();
+    }
+
+    public function getUnidadesExistentesProperty()
+    {
+        return Insumo::select('unidad_medida')
+            ->distinct()
+            ->whereNotNull('unidad_medida')
+            ->where('unidad_medida', '!=', '')
+            ->orderBy('unidad_medida')
+            ->pluck('unidad_medida');
     }
 
 

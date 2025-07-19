@@ -159,10 +159,20 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Unidad de medida</label>
-                        <input type="text" wire:model.defer="unidad_medida"
+                        <input type="text" list="unidades" wire:model.defer="unidad_medida"
                                class="w-full px-3 py-2 border rounded-md text-sm" />
-                        @error('unidad_medida') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+
+                        <datalist id="unidades">
+                            @foreach($unidadesExistentes as $unidad)
+                                <option value="{{ $unidad }}">{{ $unidad }}</option>
+                            @endforeach
+                        </datalist>
+
+                        @error('unidad_medida')
+                        <span class="text-xs text-red-600">{{ $message }}</span>
+                        @enderror
                     </div>
+
 
                     <div class="sm:col-span-2">
                         <label class="block text-sm font-medium text-gray-700">Descripción</label>
