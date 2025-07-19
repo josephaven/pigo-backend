@@ -57,7 +57,7 @@ class MetodosPago extends Component
     {
         $this->validate([
             'nombre' => 'required|string|max:255',
-            'tipo' => 'required|string|in:Efectivo,Transferencia,Terminal',
+            'tipo' => 'required|string|in:efectivo,transferencia,terminal',
             'descripcion' => 'nullable|string',
             'banco' => 'nullable|string|max:100',
             'cuenta' => 'nullable|string|max:100',

@@ -94,6 +94,7 @@
                     <td class="px-4 py-2">{{ $insumo->unidad_medida }}</td>
                     <td class="px-4 py-2">
                         {{ (int) $insumo->stock_de_sucursal }}
+
                     </td>
                     <td class="px-4 py-2">
                         @switch($insumo->alerta_stock)
