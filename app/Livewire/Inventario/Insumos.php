@@ -51,15 +51,24 @@ class Insumos extends Component
     public $combinaciones = []; // Combinaciones generadas dinámicamente
     public $stockMinimoPorSucursal = [];
     public $stockMinimoPorVariante = []; // [index][sucursal_id] = min
+    public $filasConVariantesAbiertas = [];
+
+
 
 
 
     public function render()
     {
-        $insumos = Insumo::with(['categoria', 'stockSucursales'])
-            ->when($this->filtro_nombre, fn($q) => $q->where('nombre', 'like', '%' . $this->filtro_nombre . '%'))
+        $insumos = Insumo::with(['categoria', 'stockSucursales', 'variantes.stockSucursales'])
+            ->when($this->filtro_nombre, fn($q) => $q->whereRaw('LOWER(nombre) LIKE ?', ['%' . strtolower($this->filtro_nombre) . '%']))
             ->when($this->filtro_categoria, fn($q) => $q->where('categoria_insumo_id', $this->filtro_categoria))
-            ->get();
+            ->get()
+            ->filter(function ($insumo) {
+                if (!$this->filtro_alerta) return true;
+
+                return strtolower($insumo->alerta_stock) === strtolower($this->filtro_alerta);
+            });
+
 
         return view('livewire.inventario.insumos', [
             'insumos' => $insumos,
@@ -252,7 +261,7 @@ class Insumos extends Component
     public function limpiarFiltros()
     {
         $this->reset(['filtro_nombre', 'filtro_categoria', 'filtro_alerta']);
-        $this->filtroKey = now();
+        $this->filtroKey = uniqid();
     }
 
 
@@ -429,6 +438,27 @@ class Insumos extends Component
             ->where('unidad_medida', '!=', '')
             ->orderBy('unidad_medida')
             ->pluck('unidad_medida');
+    }
+
+
+    public function toggleVariantes($insumoId)
+    {
+        if (in_array($insumoId, $this->filasConVariantesAbiertas)) {
+            $this->filasConVariantesAbiertas = array_diff($this->filasConVariantesAbiertas, [$insumoId]);
+        } else {
+            $this->filasConVariantesAbiertas[] = $insumoId;
+        }
+    }
+
+
+    public function mount()
+    {
+        $this->filtroKey = uniqid(); // para reiniciar visual de filtros
+    }
+
+    public function filtrar()
+    {
+        // solo fuerza render
     }
 
 

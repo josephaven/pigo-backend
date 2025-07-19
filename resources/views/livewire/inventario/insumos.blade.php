@@ -29,10 +29,10 @@
 
     {{-- Filtros --}}
     <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-        <input type="text" wire:model.defer="filtro_nombre" placeholder="Nombre"
+        <input type="text" wire:model.defer="filtro_nombre" wire:key="{{ $filtroKey }}-nombre" placeholder="Nombre"
                class="border border-gray-300 rounded-md px-3 py-2 text-sm">
 
-        <select wire:model.defer="filtro_categoria"
+        <select wire:model.defer="filtro_categoria" wire:key="{{ $filtroKey }}-categoria"
                 class="border border-gray-300 rounded-md px-3 py-2 text-sm">
             <option value="">Categoría</option>
             @foreach($categorias as $categoria)
@@ -40,16 +40,17 @@
             @endforeach
         </select>
 
-        <select wire:model.defer="filtro_alerta"
+        <select wire:model.defer="filtro_alerta" wire:key="{{ $filtroKey }}-alerta"
                 class="border border-gray-300 rounded-md px-3 py-2 text-sm">
             <option value="">Alertas</option>
-            <option value="normal">Normal</option>
-            <option value="bajo">Bajo stock</option>
-            <option value="sin">Sin stock</option>
+            <option value="Normal">Normal</option>
+            <option value="Bajo stock">Bajo stock</option>
+            <option value="Sin stock">Sin stock</option>
+
         </select>
 
         <div class="flex gap-2">
-            <button wire:click="$refresh"
+            <button wire:click="filtrar"
                     class="bg-[#003844] text-white px-4 py-2 rounded-md text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-[#002f39] transition w-full sm:w-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -94,27 +95,28 @@
                     <td class="px-4 py-2">{{ $insumo->unidad_medida }}</td>
                     <td class="px-4 py-2">
                         {{ (int) $insumo->stock_de_sucursal }}
-
                     </td>
                     <td class="px-4 py-2">
                         @switch($insumo->alerta_stock)
                             @case('Sin stock')
                                 <span class="px-3 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded-full">Sin stock</span>
                                 @break
-
                             @case('Bajo stock')
                                 <span class="px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">Bajo stock</span>
                                 @break
-
                             @default
                                 <span class="px-3 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">Normal</span>
                         @endswitch
                     </td>
-
-
-
                     <td class="px-4 py-2">
-                        <div class="flex justify-end">
+                        <div class="flex justify-end gap-2">
+                            @if($insumo->tiene_variantes)
+                                <button wire:click="toggleVariantes({{ $insumo->id }})"
+                                        class="bg-blue-100 text-blue-800 px-3 py-1 rounded-md text-xs hover:bg-blue-200">
+                                    {{ in_array($insumo->id, $filasConVariantesAbiertas) ? 'Ocultar' : 'Ver variantes' }}
+                                </button>
+                            @endif
+
                             <button wire:click="editar({{ $insumo->id }})"
                                     class="bg-[#003844] text-white px-3 py-1 rounded-md hover:bg-[#002f39] text-xs flex items-center gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none"
@@ -128,6 +130,52 @@
                         </div>
                     </td>
                 </tr>
+
+                @if(in_array($insumo->id, $filasConVariantesAbiertas))
+                    <tr class="bg-gray-50 border-t" wire:key="variantes-{{ $insumo->id }}">
+                        <td colspan="6" class="px-6 py-4">
+                            <div class="text-sm font-semibold mb-2">Variantes de {{ $insumo->nombre }}:</div>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full text-xs border-separate border-spacing-y-1">
+                                    <thead>
+                                    <tr class="bg-gray-200 text-gray-700">
+                                        @foreach($insumo->variantes->first()?->atributos ?? [] as $atributo => $valor)
+                                            <th class="px-3 py-1 capitalize">{{ $atributo }}</th>
+                                        @endforeach
+                                        <th class="px-3 py-1">Sucursal</th>
+                                        <th class="px-3 py-1">Stock actual</th>
+                                        <th class="px-3 py-1">Stock mínimo</th>
+                                        <th class="px-3 py-1">Alerta</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    @foreach($insumo->variantes as $variante)
+                                        @foreach($variante->stockSucursales as $stock)
+                                            <tr class="bg-white">
+                                                @foreach($variante->atributos as $valor)
+                                                    <td class="px-3 py-1">{{ $valor }}</td>
+                                                @endforeach
+                                                <td class="px-3 py-1">{{ $stock->sucursal->nombre }}</td>
+                                                <td class="px-3 py-1">{{ (int) $stock->cantidad_actual }}</td>
+                                                <td class="px-3 py-1">{{ (int) $stock->stock_minimo }}</td>
+                                                <td class="px-3 py-1">
+                                                    @if($stock->cantidad_actual == 0)
+                                                        <span class="text-red-600 font-medium">Sin stock</span>
+                                                    @elseif($stock->cantidad_actual < $stock->stock_minimo)
+                                                        <span class="text-yellow-600 font-medium">Bajo stock</span>
+                                                    @else
+                                                        <span class="text-green-600 font-medium">Normal</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                @endif
             @empty
                 <tr>
                     <td colspan="6" class="text-center py-4 text-gray-400">No hay insumos registrados.</td>
@@ -136,6 +184,9 @@
             </tbody>
         </table>
     </div>
+
+
+
 
 
     {{-- Modal separado --}}
