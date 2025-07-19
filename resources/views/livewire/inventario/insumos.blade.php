@@ -228,13 +228,13 @@
                         <h3 class="text-sm font-semibold text-gray-700">Atributos de variantes</h3>
                         <div class="space-y-2">
                             @foreach ($atributos as $index => $nombreAtributo)
-                                <div class="mb-4 border p-3 rounded bg-gray-50">
-                                    <div class="flex justify-between items-center mb-2">
+                                <div class="mb-4 border p-3 rounded bg-gray-50" wire:key="atributo-card-{{ md5($nombreAtributo . '-' . $index) }}">
+                                <div class="flex justify-between items-center mb-2">
                                         <input type="text" wire:model="atributos.{{ $index }}"
                                                placeholder="Nombre del atributo"
                                                class="w-full px-3 py-1 border rounded text-sm mr-2" />
                                         <button type="button" class="text-sm text-red-600"
-                                                wire:click="eliminarAtributo({{ $index }})">
+                                                wire:click="eliminarAtributoPorIndice({{ $index }})">
                                             Eliminar
                                         </button>
                                     </div>
@@ -243,11 +243,16 @@
                                         <div class="space-y-2" wire:key="atributo-{{ md5($nombreAtributo) }}">
                                         {{-- Mostrar valores solo si existen --}}
                                             @if (!empty($valoresAtributos[$atributos[$index]]))
-                                                @foreach ($valoresAtributos[$atributos[$index]] as $valIndex => $valor)
-                                                    <div class="flex items-center gap-2">
-                                                        <input type="text"
-                                                               wire:model.lazy="valoresAtributos.{{ $atributos[$index] }}.{{ $valIndex }}"
-                                                               wire:blur="generarCombinaciones"
+                                                @php($claveAtributo = $atributos[$index] ?? '')
+
+                                                @php($claveAtributo = $atributos[$index] ?? '')
+                                                @foreach ($valoresAtributos[$claveAtributo] as $valIndex => $valor)
+                                                    @php($valorKey = $valor ?? uniqid())
+                                                    <div class="flex items-center gap-2" wire:key="valor-{{ md5($claveAtributo . '-' . $valorKey) }}">
+
+                                                    <input type="text"
+                                                           wire:model.lazy="valoresAtributos.{{ $claveAtributo }}.{{ $valIndex }}"
+                                                           wire:blur="generarCombinaciones"
                                                                class="w-full px-2 py-1 border rounded text-sm" />
 
                                                         <button type="button"

@@ -271,57 +271,51 @@ class Insumos extends Component
         if (isset($this->valoresAtributos[$atributo][$index])) {
             unset($this->valoresAtributos[$atributo][$index]);
             $this->valoresAtributos[$atributo] = array_values($this->valoresAtributos[$atributo]);
-            $this->generarCombinaciones();// reindexar
+
+            // ⚠️ Forzar Livewire a detectar el cambio
+            $this->valoresAtributos = array_merge($this->valoresAtributos);
+
+            $this->generarCombinaciones();
         }
     }
 
 
+
     public function updatedValoresAtributos()
     {
+        // Reindexa los arrays de valores para evitar desincronización de índices
+        foreach ($this->valoresAtributos as $clave => $valores) {
+            $this->valoresAtributos[$clave] = array_values($valores);
+        }
+
         $this->generarCombinaciones();
     }
 
+
     public function updatedAtributos()
     {
-        // Filtra atributos vacíos
         $atributosLimpios = array_filter($this->atributos, fn($a) => trim($a) !== '');
 
         $valoresActualizados = [];
 
         foreach ($atributosLimpios as $atributo) {
-            // Si el atributo ya tenía valores, los conserva
-            if (isset($this->valoresAtributos[$atributo])) {
-                $valoresActualizados[$atributo] = $this->valoresAtributos[$atributo];
-            } else {
-                $valoresActualizados[$atributo] = [];
-            }
+            $valoresActualizados[$atributo] = $this->valoresAtributos[$atributo] ?? [];
         }
 
-        // Reasigna solo los atributos limpios y los valores válidos
-        $this->atributos = $atributosLimpios;// reindexa visualmente, pero ya no rompe relación
+        $this->atributos = array_values($atributosLimpios); // reindexar para el frontend
         $this->valoresAtributos = $valoresActualizados;
 
-        $this->generarCombinaciones();
-    }
-
-
-    public function eliminarAtributo($index)
-    {
-        $atributoAEliminar = $this->atributos[$index] ?? null;
-
-        if ($atributoAEliminar) {
-            // Eliminar el nombre del atributo
-            unset($this->atributos[$index]);
-
-            // Eliminar los valores del atributo eliminado
-            unset($this->valoresAtributos[$atributoAEliminar]);
-
-            // NO reindexar: evitamos array_values()
-
-            // Recalcular combinaciones basadas en los atributos y valores actuales
+        // Si ya no hay atributos, forzar reinicio de combinaciones
+        if (empty($this->atributos)) {
+            $this->combinaciones = [];
+        } else {
             $this->generarCombinaciones();
         }
     }
+
+
+
+
 
 
 
@@ -353,6 +347,20 @@ class Insumos extends Component
         $this->generarCombinaciones();
     }
 
+
+    public function eliminarAtributoPorIndice($index)
+    {
+        if (!isset($this->atributos[$index])) return;
+
+        $nombre = $this->atributos[$index];
+
+        unset($this->atributos[$index]);
+        unset($this->valoresAtributos[$nombre]);
+
+        $this->atributos = array_values($this->atributos);
+
+        $this->generarCombinaciones();
+    }
 
 
 
