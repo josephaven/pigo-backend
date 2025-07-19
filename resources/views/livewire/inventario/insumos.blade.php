@@ -240,28 +240,34 @@
                                     </div>
 
                                     @if (isset($atributos[$index]) && strlen($atributos[$index]) > 0)
-                                        <div class="space-y-2" wire:key="atributo-{{ $index }}-{{ $atributos[$index] }}">
-                                            @foreach ($valoresAtributos[$atributos[$index]] ?? [] as $valIndex => $valor)
-                                                <div class="flex items-center gap-2">
-                                                    <input type="text"
-                                                           wire:model="valoresAtributos.{{ $atributos[$index] }}.{{ $valIndex }}"
-                                                           class="w-full px-2 py-1 border rounded text-sm" />
-                                                    <button type="button"
-                                                            wire:click="eliminarValor('{{ $atributos[$index] }}', {{ $valIndex }})"
-                                                            class="text-xs text-red-600 hover:underline">
-                                                        Eliminar
-                                                    </button>
-                                                </div>
-                                            @endforeach
+                                        <div class="space-y-2" wire:key="atributo-{{ md5($nombreAtributo) }}">
+                                        {{-- Mostrar valores solo si existen --}}
+                                            @if (!empty($valoresAtributos[$atributos[$index]]))
+                                                @foreach ($valoresAtributos[$atributos[$index]] as $valIndex => $valor)
+                                                    <div class="flex items-center gap-2">
+                                                        <input type="text"
+                                                               wire:model.lazy="valoresAtributos.{{ $atributos[$index] }}.{{ $valIndex }}"
+                                                               wire:blur="generarCombinaciones"
+                                                               class="w-full px-2 py-1 border rounded text-sm" />
 
-                                                <button type="button"
-                                                        class="text-blue-600 text-sm hover:underline"
-                                                        wire:click="agregarValorPorIndice({{ $index }})">
-                                                    + Agregar valor a {{ $atributos[$index] ?? 'Atributo ' . ($index + 1) }}
-                                                </button>
+                                                        <button type="button"
+                                                                wire:click="eliminarValor('{{ $atributos[$index] }}', {{ $valIndex }})"
+                                                                class="text-xs text-red-600 hover:underline">
+                                                            Eliminar
+                                                        </button>
+                                                    </div>
+                                                @endforeach
+                                            @endif
 
+                                            {{-- Mostrar botón siempre si el atributo tiene nombre --}}
+                                            <button type="button"
+                                                    class="text-blue-600 text-sm hover:underline"
+                                                    wire:click="agregarValorPorIndice({{ $index }})">
+                                                + Agregar valor a {{ $atributos[$index] ?? 'Atributo ' . ($index + 1) }}
+                                            </button>
                                         </div>
                                     @endif
+
 
                                 </div>
                             @endforeach

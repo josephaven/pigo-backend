@@ -202,7 +202,6 @@ class Insumos extends Component
     {
         if ($value && empty($this->atributos)) {
             $this->atributos[] = 'Atributo 1';
-            $this->valoresAtributos['Atributo 1'] = [''];
         }
 
         if (!$value) {
@@ -254,7 +253,6 @@ class Insumos extends Component
     {
         $nuevo = 'Atributo ' . (count($this->atributos) + 1);
         $this->atributos[] = $nuevo;
-        $this->valoresAtributos[$nuevo] = [''];
         $this->generarCombinaciones();
     }
 
@@ -285,49 +283,47 @@ class Insumos extends Component
 
     public function updatedAtributos()
     {
-        $atributosLimpios = array_filter($this->atributos); // elimina vacíos
+        // Filtra atributos vacíos
+        $atributosLimpios = array_filter($this->atributos, fn($a) => trim($a) !== '');
 
-        // Eliminar claves obsoletas en valores
-        foreach ($this->valoresAtributos as $clave => $valores) {
-            if (!in_array($clave, $atributosLimpios)) {
-                unset($this->valoresAtributos[$clave]);
+        $valoresActualizados = [];
+
+        foreach ($atributosLimpios as $atributo) {
+            // Si el atributo ya tenía valores, los conserva
+            if (isset($this->valoresAtributos[$atributo])) {
+                $valoresActualizados[$atributo] = $this->valoresAtributos[$atributo];
+            } else {
+                $valoresActualizados[$atributo] = [];
             }
         }
 
-        // Asegurarse de que cada atributo tenga arreglo
-        foreach ($atributosLimpios as $clave) {
-            if (!isset($this->valoresAtributos[$clave])) {
-                $this->valoresAtributos[$clave] = [];
-            }
-        }
+        // Reasigna solo los atributos limpios y los valores válidos
+        $this->atributos = $atributosLimpios;// reindexa visualmente, pero ya no rompe relación
+        $this->valoresAtributos = $valoresActualizados;
 
-        $this->atributos = array_values($atributosLimpios); // reindexar
         $this->generarCombinaciones();
     }
+
 
     public function eliminarAtributo($index)
     {
         $atributoAEliminar = $this->atributos[$index] ?? null;
 
         if ($atributoAEliminar) {
-            // Eliminar nombre del atributo
+            // Eliminar el nombre del atributo
             unset($this->atributos[$index]);
-            $this->atributos = array_values($this->atributos); // Reindexar
 
-            // Eliminar valores asociados
+            // Eliminar los valores del atributo eliminado
             unset($this->valoresAtributos[$atributoAEliminar]);
 
-            // Regenerar valoresAtributos con claves actualizadas
-            $valoresReasignados = [];
-            foreach ($this->atributos as $atributo) {
-                $valoresReasignados[$atributo] = $this->valoresAtributos[$atributo] ?? [''];
-            }
-            $this->valoresAtributos = $valoresReasignados;
+            // NO reindexar: evitamos array_values()
 
-            // Recalcular combinaciones
+            // Recalcular combinaciones basadas en los atributos y valores actuales
             $this->generarCombinaciones();
         }
     }
+
+
 
 
 
