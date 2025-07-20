@@ -87,32 +87,54 @@
                 <th class="px-4 py-2 font-semibold text-right">Acciones</th>
             </tr>
             </thead>
+
             <tbody>
             @forelse($insumos as $insumo)
+                {{-- Fila principal --}}
                 <tr class="bg-white shadow-sm rounded" wire:key="insumo-{{ $insumo->id }}">
                     <td class="px-4 py-2">{{ $insumo->nombre }}</td>
                     <td class="px-4 py-2">{{ $insumo->categoria->nombre ?? '-' }}</td>
                     <td class="px-4 py-2">{{ $insumo->unidad_medida }}</td>
                     <td class="px-4 py-2">
-                        {{ (int) $insumo->stock_de_sucursal }}
+                        @if($insumo->tiene_variantes)
+                            {{ $insumo->stock_total_variantes ?? '-' }}
+                        @else
+                            {{ (int) $insumo->stock_de_sucursal }}
+                        @endif
                     </td>
+
                     <td class="px-4 py-2">
-                        @switch($insumo->alerta_stock)
-                            @case('Sin stock')
-                                <span class="px-3 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded-full">Sin stock</span>
-                                @break
-                            @case('Bajo stock')
-                                <span class="px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">Bajo stock</span>
-                                @break
-                            @default
-                                <span class="px-3 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">Normal</span>
-                        @endswitch
+                        @if($insumo->tiene_variantes)
+                            @switch($insumo->alerta_variantes)
+                                @case('Sin stock')
+                                    <span class="px-3 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded-full">Sin stock</span>
+                                    @break
+                                @case('Bajo stock')
+                                    <span class="px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">Bajo stock</span>
+                                    @break
+                                @default
+                                    <span class="px-3 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">Normal</span>
+                            @endswitch
+                        @else
+                            @switch($insumo->alerta_stock)
+                                @case('Sin stock')
+                                    <span class="px-3 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded-full">Sin stock</span>
+                                    @break
+                                @case('Bajo stock')
+                                    <span class="px-3 py-1 text-xs font-semibold bg-yellow-100 text-yellow-800 rounded-full">Bajo stock</span>
+                                    @break
+                                @default
+                                    <span class="px-3 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">Normal</span>
+                            @endswitch
+                        @endif
                     </td>
-                    <td class="px-4 py-2">
+
+
+                    <td class="px-4 py-2 text-right">
                         <div class="flex justify-end gap-2">
                             @if($insumo->tiene_variantes)
                                 <button wire:click="toggleVariantes({{ $insumo->id }})"
-                                        class="bg-blue-100 text-blue-800 px-3 py-1 rounded-md text-xs hover:bg-blue-200">
+                                        class="bg-[#003844] text-white px-3 py-1 rounded-md hover:bg-[#002f39] text-xs flex items-center gap-1">
                                     {{ in_array($insumo->id, $filasConVariantesAbiertas) ? 'Ocultar' : 'Ver variantes' }}
                                 </button>
                             @endif
@@ -131,15 +153,20 @@
                     </td>
                 </tr>
 
+                {{-- Bloque de variantes --}}
+                {{-- … antes del toggleVariantes() … --}}
                 @if(in_array($insumo->id, $filasConVariantesAbiertas))
                     <tr class="bg-gray-50 border-t" wire:key="variantes-{{ $insumo->id }}">
                         <td colspan="6" class="px-6 py-4">
-                            <div class="text-sm font-semibold mb-2">Variantes de {{ $insumo->nombre }}:</div>
+                            <div class="text-sm font-semibold mb-2">
+                                Variantes de {{ $insumo->nombre }}:
+                            </div>
                             <div class="overflow-x-auto">
                                 <table class="min-w-full text-xs border-separate border-spacing-y-1">
-                                    <thead>
-                                    <tr class="bg-gray-200 text-gray-700">
-                                        @foreach($insumo->variantes->first()?->atributos ?? [] as $atributo => $valor)
+                                    {{-- Aquí va el thead corregido --}}
+                                    <thead class="bg-gray-200 text-gray-700">
+                                    <tr>
+                                        @foreach(json_decode($insumo->variantes->first()?->atributos ?? '[]', true) as $atributo => $valor)
                                             <th class="px-3 py-1 capitalize">{{ $atributo }}</th>
                                         @endforeach
                                         <th class="px-3 py-1">Sucursal</th>
@@ -152,7 +179,7 @@
                                     @foreach($insumo->variantes as $variante)
                                         @foreach($variante->stockSucursales as $stock)
                                             <tr class="bg-white">
-                                                @foreach($variante->atributos as $valor)
+                                                @foreach(json_decode($variante->atributos ?? '[]', true) as $valor)
                                                     <td class="px-3 py-1">{{ $valor }}</td>
                                                 @endforeach
                                                 <td class="px-3 py-1">{{ $stock->sucursal->nombre }}</td>
@@ -176,14 +203,24 @@
                         </td>
                     </tr>
                 @endif
+                {{-- … resto de tu @endforelse, etc. … --}}
+
+
             @empty
                 <tr>
-                    <td colspan="6" class="text-center py-4 text-gray-400">No hay insumos registrados.</td>
+                    <td colspan="6" class="text-center py-4 text-gray-400">
+                        No hay insumos registrados.
+                    </td>
                 </tr>
             @endforelse
             </tbody>
         </table>
     </div>
+
+
+
+
+
 
 
 

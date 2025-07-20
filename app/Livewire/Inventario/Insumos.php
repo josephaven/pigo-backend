@@ -56,19 +56,48 @@ class Insumos extends Component
 
 
 
-
     public function render()
     {
+        $sucursalId = auth()->check() ? auth()->user()->sucursal_id : null;
+
         $insumos = Insumo::with(['categoria', 'stockSucursales', 'variantes.stockSucursales'])
             ->when($this->filtro_nombre, fn($q) => $q->whereRaw('LOWER(nombre) LIKE ?', ['%' . strtolower($this->filtro_nombre) . '%']))
             ->when($this->filtro_categoria, fn($q) => $q->where('categoria_insumo_id', $this->filtro_categoria))
             ->get()
-            ->filter(function ($insumo) {
+            ->filter(function ($insumo) use ($sucursalId) {
                 if (!$this->filtro_alerta) return true;
 
                 return strtolower($insumo->alerta_stock) === strtolower($this->filtro_alerta);
             });
 
+        foreach ($insumos as $insumo) {
+            if ($insumo->tiene_variantes && $sucursalId) {
+                $stockTotal = 0;
+                $alerta = 'Normal';
+                $tieneBajoStock = false;
+
+                foreach ($insumo->variantes as $variante) {
+                    foreach ($variante->stockSucursales as $stock) {
+                        if ($stock->sucursal_id != $sucursalId) continue;
+
+                        $stockTotal += $stock->cantidad_actual;
+
+                        if ($stock->cantidad_actual == 0) {
+                            $alerta = 'Sin stock';
+                        } elseif ($stock->cantidad_actual < $stock->stock_minimo) {
+                            $tieneBajoStock = true;
+                        }
+                    }
+                }
+
+                if ($alerta !== 'Sin stock' && $tieneBajoStock) {
+                    $alerta = 'Bajo stock';
+                }
+
+                $insumo->stock_total_variantes = $stockTotal;
+                $insumo->alerta_variantes = $alerta;
+            }
+        }
 
         return view('livewire.inventario.insumos', [
             'insumos' => $insumos,
@@ -77,6 +106,10 @@ class Insumos extends Component
             'unidadesExistentes' => $this->unidadesExistentes,
         ])->layout('layouts.app');
     }
+
+
+
+
 
     public function abrirModal()
     {
