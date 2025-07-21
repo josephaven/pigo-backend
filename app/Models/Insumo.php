@@ -63,13 +63,13 @@ class Insumo extends Model
 
     public function getStockDeSucursalAttribute()
     {
-        $sucursalId = auth()->user()->sucursal_id;
-        return $this->stockSucursales->where('sucursal_id', $sucursalId)->sum('cantidad_actual');
+        $sucursalId = sucursal_activa_id(); // ✅ Usamos el helper correcto
+        return $this->stockSucursales->firstWhere('sucursal_id', $sucursalId)?->cantidad_actual ?? 0;
     }
 
     public function getAlertaStockAttribute(): string
     {
-        $sucursalId = auth()->user()->sucursal_id;
+        $sucursalId = sucursal_activa_id(); // ✅ Lo mismo aquí
 
         $registro = $this->stockSucursales->firstWhere('sucursal_id', $sucursalId);
 
@@ -80,12 +80,12 @@ class Insumo extends Model
         $actual = (int) $registro->cantidad_actual;
         $minimo = (int) $registro->stock_minimo;
 
-
         if ($actual === 0) return 'Sin stock';
         if ($actual < $minimo) return 'Bajo stock';
 
         return 'Normal';
     }
+
 
 
 

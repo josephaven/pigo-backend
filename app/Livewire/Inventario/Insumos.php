@@ -58,20 +58,21 @@ class Insumos extends Component
 
     public function render()
     {
-        $sucursalId = auth()->check() ? auth()->user()->sucursal_id : null;
+        $sucursalId = sucursal_activa_id();
+        $esJefe = auth()->user()?->rol?->nombre === 'Jefe';
 
-        $insumos = Insumo::with(['categoria', 'stockSucursales', 'variantes.stockSucursales'])
+        $insumos = Insumo::with([
+            'categoria',
+            'stockSucursales', // ← Cargar todos si es Jefe
+            'variantes.stockSucursales', // También todos
+        ])
             ->when($this->filtro_nombre, fn($q) => $q->whereRaw('LOWER(nombre) LIKE ?', ['%' . strtolower($this->filtro_nombre) . '%']))
             ->when($this->filtro_categoria, fn($q) => $q->where('categoria_insumo_id', $this->filtro_categoria))
-            ->get()
-            ->filter(function ($insumo) use ($sucursalId) {
-                if (!$this->filtro_alerta) return true;
-
-                return strtolower($insumo->alerta_stock) === strtolower($this->filtro_alerta);
-            });
+            ->get();
 
         foreach ($insumos as $insumo) {
-            if ($insumo->tiene_variantes && $sucursalId) {
+            if ($insumo->tiene_variantes) {
+                // Mostrar alerta SOLO para la sucursal activa
                 $stockTotal = 0;
                 $alerta = 'Normal';
                 $tieneBajoStock = false;
@@ -96,8 +97,31 @@ class Insumos extends Component
 
                 $insumo->stock_total_variantes = $stockTotal;
                 $insumo->alerta_variantes = $alerta;
+            } else {
+                $stock = $insumo->stockSucursales->firstWhere('sucursal_id', $sucursalId);
+
+                $cantidad = $stock->cantidad_actual ?? 0;
+                $minimo = $stock->stock_minimo ?? 0;
+
+                if ($cantidad == 0) {
+                    $insumo->alerta_stock = 'Sin stock';
+                } elseif ($cantidad < $minimo) {
+                    $insumo->alerta_stock = 'Bajo stock';
+                } else {
+                    $insumo->alerta_stock = 'Normal';
+                }
+
+                $insumo->stock_de_sucursal = $cantidad;
             }
         }
+
+        // Filtro final por alerta (si se desea aplicar)
+        $insumos = $insumos->filter(function ($insumo) {
+            if (!$this->filtro_alerta) return true;
+
+            $alerta = $insumo->tiene_variantes ? $insumo->alerta_variantes : $insumo->alerta_stock;
+            return strtolower($alerta) === strtolower($this->filtro_alerta);
+        });
 
         return view('livewire.inventario.insumos', [
             'insumos' => $insumos,
@@ -106,6 +130,8 @@ class Insumos extends Component
             'unidadesExistentes' => $this->unidadesExistentes,
         ])->layout('layouts.app');
     }
+
+
 
 
 
@@ -226,13 +252,19 @@ class Insumos extends Component
                 ]
             );
 
-            // Borrar variantes previas si estamos editando
             if ($this->modo_edicion) {
+                // Eliminar variantes previas
+                $idsVariantes = VarianteInsumo::where('insumo_id', $insumo->id)->pluck('id');
+
                 VarianteInsumo::where('insumo_id', $insumo->id)->delete();
-                StockSucursal::where('insumo_id', $insumo->id)->delete();
-                StockSucursal::whereIn('variante_insumo_id', function ($q) use ($insumo) {
-                    $q->select('id')->from('variantes_insumos')->where('insumo_id', $insumo->id);
-                })->delete();
+
+                // Borrar solo los stocks relacionados a esas variantes
+                StockSucursal::whereIn('variante_insumo_id', $idsVariantes)->delete();
+
+                // Borrar solo los stocks directos del insumo (sin variante)
+                StockSucursal::where('insumo_id', $insumo->id)
+                    ->whereNull('variante_insumo_id')
+                    ->delete();
             }
 
             if ($this->tiene_variantes && !empty($this->combinaciones)) {
@@ -259,14 +291,12 @@ class Insumos extends Component
                         'cantidad_actual' => $cantidad ?? 0,
                         'stock_minimo' => $this->stockMinimoPorSucursal[$sucursal_id] ?? 0,
                     ]);
-
                 }
             }
 
             DB::commit();
 
-            $this->dispatch('toast', mensaje: $this->modo_edicion ? 'Insumo actualizado correctamente'
-                : 'Insumo creado correctamente', tipo: $this->modo_edicion ? 'info' : 'success');
+            $this->dispatch('toast', mensaje: $this->modo_edicion ? 'Insumo actualizado correctamente' : 'Insumo creado correctamente', tipo: $this->modo_edicion ? 'info' : 'success');
             $this->cerrarModal();
 
         } catch (\Throwable $e) {
@@ -275,6 +305,7 @@ class Insumos extends Component
             $this->dispatch('toast', mensaje: 'Error al guardar insumo', tipo: 'error');
         }
     }
+
 
     public function cerrarModal()
     {

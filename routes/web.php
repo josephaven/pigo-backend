@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SucursalActivaController;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Configuracion\Empleados;
 use App\Livewire\Configuracion\Sucursales;
@@ -9,6 +10,7 @@ use App\Livewire\Inventario\Insumos;
 use App\Livewire\Inventario\Traslados;
 use App\Livewire\Inventario\Mermas;
 use App\Livewire\Inventario\Categorias;
+use App\Livewire\Dashboard;
 
 Route::middleware([
     'auth:sanctum',
@@ -17,7 +19,10 @@ Route::middleware([
 ])->group(function () {
 
     // Dashboard
-    Route::get('/dashboard', fn() => view('dashboard'))->name('dashboard');
+    Route::get('/dashboard', Dashboard::class)->name('dashboard');
+
+    Route::post('/cambiar-sucursal', [SucursalActivaController::class, 'cambiar'])->name('cambiar-sucursal');
+
 
     // Acceso restringido por rol
     Route::get('/admin', fn() => 'Bienvenido Jefe')->middleware('rol:Jefe');
