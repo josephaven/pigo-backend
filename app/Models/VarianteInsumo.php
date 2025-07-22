@@ -28,7 +28,7 @@ class VarianteInsumo extends Model
 
     public function stockSucursales()
     {
-        return $this->hasMany(StockSucursal::class, 'variante_insumo_id');
+        return $this->hasMany(StockSucursal::class, 'variante_insumo_id', 'id');
     }
 
     public function mermas()

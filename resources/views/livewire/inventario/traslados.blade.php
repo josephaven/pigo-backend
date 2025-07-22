@@ -24,6 +24,67 @@
         });
     </script>
 
+    {{-- 🔍 Filtros --}}
+    <div class="flex flex-wrap gap-4 mb-4 items-end">
+        <select wire:model="filtro_origen" wire:key="{{ $filtroKey }}"
+                class="px-3 py-2 rounded-md border border-gray-300 text-sm min-w-[160px]">
+            <option value="">Sucursal origen</option>
+            @foreach ($sucursales as $sucursal)
+                <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
+            @endforeach
+        </select>
+
+        <select wire:model="filtro_destino" wire:key="{{ $filtroKey }}"
+                class="px-3 py-2 rounded-md border border-gray-300 text-sm min-w-[160px]">
+            <option value="">Sucursal destino</option>
+            @foreach ($sucursales as $sucursal)
+                <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
+            @endforeach
+        </select>
+
+        <select wire:model="filtro_estado" wire:key="{{ $filtroKey }}"
+                class="px-3 py-2 rounded-md border border-gray-300 text-sm min-w-[120px]">
+            <option value="">Estado</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="enviado">Enviado</option>
+            <option value="recibido">Recibido</option>
+        </select>
+
+        <input type="text" wire:model="filtro_usuario" wire:key="{{ $filtroKey }}"
+               class="px-3 py-2 rounded-md border border-gray-300 text-sm w-[160px]"
+               placeholder="Responsable">
+
+        <input type="date" wire:model="filtro_fecha" wire:key="{{ $filtroKey }}"
+               class="px-3 py-2 rounded-md border border-gray-300 text-sm w-[160px]">
+
+
+
+
+        <button wire:click="$refresh"
+                class="bg-[#003844] text-white px-4 py-2 rounded-md text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-[#002f39] transition w-full sm:w-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m21 21-4.34-4.34" />
+                <circle cx="11" cy="11" r="8" />
+            </svg>
+            Buscar
+        </button>
+
+        <button wire:click="limpiarFiltros"
+                class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-gray-300 transition w-full sm:w-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m16 22-1-4" />
+                <path d="M19 13.99a1 1 0 0 0 1-1V12a2 2 0 0 0-2-2h-3a1 1 0 0 1-1-1V4a2 2 0 0 0-4 0v5a1 1 0 0 1-1 1H6a2 2 0 0 0-2 2v.99a1 1 0 0 0 1 1" />
+                <path d="M5 14h14l1.973 6.767A1 1 0 0 1 20 22H4a1 1 0 0 1-.973-1.233z" />
+                <path d="m8 22 1-4" />
+            </svg>
+            Limpiar
+        </button>
+    </div>
+
+
+
     {{-- 📦 TABLA PRINCIPAL DE TRASLADOS --}}
     <div class="overflow-x-auto bg-white shadow rounded-lg mb-6">
         <table class="min-w-full text-xs sm:text-sm text-left border-separate border-spacing-y-2">
@@ -33,6 +94,7 @@
                 <th class="px-4 py-2 font-semibold">Origen</th>
                 <th class="px-4 py-2 font-semibold">Destino</th>
                 <th class="px-4 py-2 font-semibold">Responsable</th>
+                <th class="px-4 py-2 font-semibold">Insumos</th>
                 <th class="px-4 py-2 font-semibold">Estado</th>
                 <th class="px-4 py-2 font-semibold text-right">Acciones</th>
             </tr>
@@ -44,27 +106,69 @@
                     <td class="px-4 py-2">{{ $traslado->sucursalOrigen->nombre }}</td>
                     <td class="px-4 py-2">{{ $traslado->sucursalDestino->nombre }}</td>
                     <td class="px-4 py-2">{{ $traslado->user->name }}</td>
+                    <td class="px-4 py-2 text-sm text-gray-700">
+                        @php($detalles = $traslado->detalles ?? [])
+                        @php($contador = 0)
+                        @php($maxVisibles = 3)
+                        @php($total = count($detalles))
+
+                        @if($total > 0)
+                            <ul class="list-disc list-inside space-y-0.5 text-xs">
+                                @foreach($detalles as $detalle)
+                                    @break($contador >= $maxVisibles)
+
+                                    @if($detalle->insumo)
+                                        <li class="truncate">{{ $detalle->insumo->nombre }}</li>
+                                    @elseif($detalle->variante && $detalle->variante->insumo)
+                                        <li class="truncate">
+                                            {{ $detalle->variante->insumo->nombre }}
+                                            @if($detalle->variante->atributos)
+
+                                                @foreach(json_decode($detalle->variante->atributos, true) as $k => $v)
+                                                    {{ $k }}: {{ $v }}@if(!$loop->last), @endif
+                                                @endforeach
+
+                                            @endif
+                                        </li>
+                                    @endif
+
+                                    @php($contador++)
+                                @endforeach
+                            </ul>
+
+                            @if($total > $maxVisibles)
+                                <div class="text-xs text-gray-500 italic mt-1">+{{ $total - $maxVisibles }} más</div>
+                            @endif
+                        @else
+                            <span class="text-xs text-gray-400 italic">Sin insumos</span>
+                        @endif
+                    </td>
+
+
 
                     {{-- 🟡 SELECT INLINE PARA CAMBIAR ESTADO --}}
                     <td class="px-4 py-2">
                         <div class="relative inline-block">
                             <select wire:change="actualizarEstado({{ $traslado->id }}, $event.target.value)"
                                     class="appearance-none pl-3 pr-6 py-1.5 text-xs rounded-full font-medium transition
-                       border-none focus:ring-2 focus:outline-none
-                       bg-yellow-100 text-yellow-800
-                       hover:cursor-pointer"
+               border-none focus:ring-2 focus:outline-none hover:cursor-pointer
+               {{
+                   $traslado->estado === 'pendiente' ? 'bg-yellow-100 text-yellow-800' :
+                   ($traslado->estado === 'enviado' ? 'bg-blue-100 text-blue-800' :
+                   ($traslado->estado === 'recibido' ? 'bg-green-100 text-green-800' :
+                   ($traslado->estado === 'cancelado' ? 'bg-red-100 text-red-800' : '')))
+               }}"
                                     style="min-width: 100px">
                                 <option value="pendiente" {{ $traslado->estado === 'pendiente' ? 'selected' : '' }}>Pendiente</option>
                                 <option value="enviado" {{ $traslado->estado === 'enviado' ? 'selected' : '' }}>Enviado</option>
                                 <option value="recibido" {{ $traslado->estado === 'recibido' ? 'selected' : '' }}>Recibido</option>
-                            </select>
+                                <option value="cancelado" {{ $traslado->estado === 'cancelado' ? 'selected' : '' }}>Cancelado</option>
 
+                            </select>
 
 
                         </div>
                     </td>
-
-
 
 
                     {{-- 🔎 BOTÓN PARA VER DETALLES --}}
@@ -100,6 +204,7 @@
                 <h2 class="text-lg font-semibold mb-4">Detalles del traslado</h2>
 
                 <p class="text-sm text-gray-700 mb-2">
+                    <strong>Fecha:</strong> {{ \Carbon\Carbon::parse($trasladoSeleccionado->fecha_solicitud)->format('d/m/Y') }} <br>
                     <strong>Origen:</strong> {{ $trasladoSeleccionado->sucursalOrigen->nombre }} <br>
                     <strong>Destino:</strong> {{ $trasladoSeleccionado->sucursalDestino->nombre }} <br>
                     <strong>Responsable:</strong> {{ $trasladoSeleccionado->user->name }} <br>
@@ -148,71 +253,122 @@
 
                 <h2 class="text-xl font-semibold mb-4">Nuevo traslado</h2>
 
+                {{-- 🔁 Selección de sucursales --}}
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label class="block text-sm font-medium">Sucursal origen</label>
                         <select wire:model="sucursal_origen_id" class="w-full px-3 py-2 border rounded-md text-sm">
+                            @error('sucursal_origen_id')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+
                             <option value="">Selecciona...</option>
                             @foreach($sucursales as $sucursal)
                                 <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
                             @endforeach
                         </select>
+                        @error('sucursal_origen_id')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+
                     </div>
                     <div>
                         <label class="block text-sm font-medium">Sucursal destino</label>
                         <select wire:model="sucursal_destino_id" class="w-full px-3 py-2 border rounded-md text-sm">
                             <option value="">Selecciona...</option>
                             @foreach($sucursales as $sucursal)
-                                <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
+                                @if($sucursal->id != $sucursal_origen_id)
+                                    <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
+                                @endif
                             @endforeach
                         </select>
+                        @error('sucursal_destino_id')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
+
                     </div>
                 </div>
 
-                {{-- 🧾 Tabla de insumos y variantes --}}
-                <div class="overflow-x-auto border rounded-md mt-4">
-                    <table class="min-w-full text-sm text-left">
-                        <thead class="bg-gray-100 text-gray-600">
-                        <tr>
-                            <th class="px-3 py-2">Insumo / Variante</th>
-                            <th class="px-3 py-2">Stock</th>
-                            <th class="px-3 py-2">Cantidad</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach($insumos as $insumo)
-                            @if(!$insumo->tiene_variantes)
-                                <tr>
-                                    <td class="px-3 py-2">{{ $insumo->nombre }}</td>
-                                    <td class="px-3 py-2">{{ $insumo->stockSucursales->first()?->cantidad_actual ?? 0 }}</td>
-                                    <td class="px-3 py-2">
-                                        <input type="number" min="0"
-                                               wire:model.defer="cantidadesTraslado.insumo-{{ $insumo->id }}"
-                                               class="w-full px-2 py-1 border rounded text-sm" />
-                                    </td>
-                                </tr>
-                            @else
-                                @foreach($insumo->variantes as $variante)
-                                    <tr class="bg-gray-50">
-                                        <td class="px-3 py-2">
-                                            {{ $insumo->nombre }} (
-                                            {{ implode(' / ', collect($variante->atributos)->map(fn($v, $k) => "$k: $v")->toArray()) }}
-                                            )
-                                        </td>
-                                        <td class="px-3 py-2">{{ $variante->stockSucursales->first()?->cantidad_actual ?? 0 }}</td>
-                                        <td class="px-3 py-2">
-                                            <input type="number" min="0"
-                                                   wire:model.defer="cantidadesTraslado.variante-{{ $variante->id }}"
-                                                   class="w-full px-2 py-1 border rounded text-sm" />
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            @endif
-                        @endforeach
-                        </tbody>
-                    </table>
+                {{-- 🔎 Buscador de insumos --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium">Buscar insumo o variante</label>
+                    <input type="text"
+                           wire:model.debounce.500ms="insumoBuscado"
+                           wire:keydown.enter="buscarInsumos"
+                           placeholder="Buscar insumo o variante"
+                           class="w-full mt-1 px-3 py-2 border rounded-md text-sm">
+
+
+
+                    {{-- 📋 Resultados --}}
+                    @if(!empty($insumosDisponibles))
+                        <div class="mt-2 border rounded-md bg-white shadow-sm max-h-48 overflow-y-auto">
+                            @foreach($insumosDisponibles as $insumo)
+                                @if($insumo['tiene_variantes'])
+                                    @foreach($insumo['variantes'] as $variante)
+                                        <div wire:click="agregarInsumo('variante', {{ $variante['id'] }})"
+                                             class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b">
+                                            {{ $insumo['nombre'] }}
+                                            @foreach($variante['atributos'] as $k => $v)
+                                                ({{ $k }}: {{ $v }})
+                                            @endforeach
+                                            – Stock: {{ $variante['stock'] }}
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div wire:click="agregarInsumo('insumo', {{ $insumo['id'] }})"
+                                         class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b">
+                                        {{ $insumo['nombre'] }} – Stock: {{ $insumo['stock'] }}
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
 
+                {{-- ✅ Tabla de insumos seleccionados --}}
+                @if(!empty($insumosSeleccionados))
+                    <div class="overflow-x-auto border rounded-md">
+                        <table class="min-w-full text-sm text-left">
+                            <thead class="bg-gray-100 text-gray-600">
+                            <tr>
+                                <th class="px-3 py-2">Insumo / Variante</th>
+                                <th class="px-3 py-2 text-center">Stock</th>
+                                <th class="px-3 py-2 text-center">Cantidad</th>
+                                <th class="px-3 py-2"></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach($insumosSeleccionados as $clave => $insumo)
+                                <tr class="border-t">
+                                    <td class="px-3 py-2">
+                                        {{ $insumo['nombre'] }}
+                                        @if(isset($insumo['atributos']))
+                                            @foreach($insumo['atributos'] as $k => $v)
+                                                ({{ $k }}: {{ $v }})
+                                            @endforeach
+                                        @endif
+                                    </td>
+                                    <td class="px-3 py-2 text-center">{{ $insumo['stock'] }}</td>
+                                    <td class="px-3 py-2 text-center">
+                                        <input type="number" min="0" step="0.01"
+                                               wire:model.defer="cantidadesTraslado.{{ $clave }}"
+                                               class="w-24 px-2 py-1 border rounded text-sm text-center">
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <button wire:click="quitarInsumo('{{ $clave }}')"
+                                                class="text-red-600 hover:text-red-800 text-xs font-semibold">
+                                            Quitar
+                                        </button>
+                                    </td>
+                                </tr>
+                            @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                @endif
+
+                {{-- 🧷 Botones de acción --}}
                 <div class="flex justify-end gap-2 mt-6">
                     <button wire:click="cerrarModal"
                             class="px-4 py-2 bg-gray-200 rounded-md text-sm hover:bg-gray-300">
@@ -226,6 +382,7 @@
             </div>
         </div>
     @endif
+
 
     {{-- 🔔 Toasts de notificación --}}
     @include('components.toast')

@@ -28,7 +28,7 @@ class DetalleTraslado extends Model
         return $this->belongsTo(Insumo::class, 'insumo_id');
     }
 
-    public function variante()
+    public function varianteInsumo()
     {
         return $this->belongsTo(VarianteInsumo::class, 'variante_insumo_id');
     }
