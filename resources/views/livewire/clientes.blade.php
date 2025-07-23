@@ -23,10 +23,10 @@
 
     {{-- Filtros --}}
     <div class="flex flex-wrap gap-4 mb-4 items-end">
-        <input wire:model.defer="filtro_nombre" type="text" placeholder="Nombre"
+        <input wire:model.defer="filtro_nombre" wire:key="{{ $filtroKey }}-nombre" type="text" placeholder="Nombre"
                class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[160px]" />
 
-        <select wire:model.defer="filtro_tipo"
+        <select wire:model.defer="filtro_tipo" wire:key="{{ $filtroKey }}-tipo"
                 class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[120px]">
             <option value="">Tipo</option>
             <option value="Normal">Normal</option>
@@ -34,13 +34,13 @@
             <option value="Maquilador">Maquilador</option>
         </select>
 
-        <input wire:model.defer="filtro_telefono" type="text" placeholder="Teléfono"
+        <input wire:model.defer="filtro_telefono" wire:key="{{ $filtroKey }}-telefono" type="text" placeholder="Teléfono"
                class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[120px]" />
 
-        <input wire:model.defer="filtro_ocupacion" type="text" placeholder="Ocupación"
+        <input wire:model.defer="filtro_ocupacion" wire:key="{{ $filtroKey }}-ocupacion" type="text" placeholder="Ocupación"
                class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[160px]" />
 
-        <select wire:model.defer="filtro_mes_nacimiento"
+        <select wire:model.defer="filtro_mes_nacimiento" wire:key="{{ $filtroKey }}-mes"
                 class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[155px]">
             <option value="">Mes nacimiento</option>
             <option value="01">Enero</option>
@@ -57,7 +57,7 @@
             <option value="12">Diciembre</option>
         </select>
 
-        <select wire:model.defer="filtro_anio_nacimiento"
+        <select wire:model.defer="filtro_anio_nacimiento" wire:key="{{ $filtroKey }}-anio"
                 class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[150px]">
             <option value="">Año nacimiento</option>
             @for ($a = now()->year; $a >= 1950; $a--)
