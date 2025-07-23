@@ -1,16 +1,18 @@
 <?php
 
 use App\Http\Controllers\SucursalActivaController;
-use Illuminate\Support\Facades\Route;
-use App\Livewire\Configuracion\Empleados;
-use App\Livewire\Configuracion\Sucursales;
-use App\Livewire\Configuracion\MetodosPago;
 use App\Livewire\Clientes;
-use App\Livewire\Inventario\Insumos;
-use App\Livewire\Inventario\Traslados;
-use App\Livewire\Inventario\Mermas;
-use App\Livewire\Inventario\Categorias;
+use App\Livewire\Configuracion\Empleados;
+use App\Livewire\Configuracion\MetodosPago;
+use App\Livewire\Configuracion\Sucursales;
 use App\Livewire\Dashboard;
+use App\Livewire\Inventario\Categorias;
+use App\Livewire\Inventario\Insumos;
+use App\Livewire\Inventario\Mermas;
+use App\Livewire\Inventario\Traslados;
+use App\Livewire\Servicios\Servicios;
+use Illuminate\Support\Facades\Route;
+use App\Livewire\Servicios\NuevoServicio;
 
 Route::middleware([
     'auth:sanctum',
@@ -45,6 +47,9 @@ Route::middleware([
     Route::get('/inventario/categorias', Categorias::class)->name('inventario.categorias');
 
 
-
+    // Módulo Servicios
+    Route::get('/servicios', Servicios::class)->name('servicios');
+    Route::get('/servicios/nuevo', NuevoServicio::class)->name('servicios.nuevo');
+    //Route::get('/servicios/editar/{servicio}', NuevoServicio::class)->name('servicios.editar');
     // Aquí puedes agregar otras rutas por módulo en el futuro...
 });
