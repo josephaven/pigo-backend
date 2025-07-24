@@ -85,6 +85,148 @@
         </div>
     </div>
 
+    {{-- VISIBILIDAD --}}
+    <div class="bg-white rounded-lg shadow p-6 space-y-4 border border-gray-200 mt-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">Visibilidad</h2>
+
+        {{-- Sucursales agregadas --}}
+        <div class="flex flex-wrap gap-2 mb-2">
+            @foreach ($sucursales_seleccionadas as $id)
+                @foreach ($sucursales_disponibles as $sucursal)
+                    @if ($sucursal->id == $id)
+                        <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-1">
+                        {{ $sucursal->nombre }}
+                        <button type="button" wire:click="quitarSucursal({{ $id }})"
+                                class="hover:text-red-600 font-bold">×</button>
+                    </span>
+                    @endif
+                @endforeach
+            @endforeach
+        </div>
+
+        {{-- Selector --}}
+        <div class="flex gap-2">
+            <select wire:model="sucursal_a_agregar"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                <option selected hidden value="">Selecciona una sucursal para agregar</option>
+                @foreach ($sucursales_disponibles as $sucursal)
+                    @if (!in_array($sucursal->id, $sucursales_seleccionadas, true))
+                        <option value="{{ $sucursal->id }}">{{ $sucursal->nombre }}</option>
+                    @endif
+                @endforeach
+            </select>
+
+
+            <button type="button" wire:click="agregarSucursal"
+                    class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm hover:bg-[#002f39]">
+                Agregar
+            </button>
+        </div>
+
+
+        @error('sucursales_seleccionadas')
+        <span class="text-xs text-red-600">{{ $message }}</span>
+        @enderror
+    </div>
+
+    {{-- INSUMOS ASOCIADOS --}}
+    <div class="bg-white rounded-lg shadow p-6 space-y-4 border border-gray-200 mt-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">Insumos asociados</h2>
+
+        {{-- Agregar insumo --}}
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end" wire:key="formulario-insumo-{{ count($insumos_agregados) }}">
+        {{-- Selector de insumo --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Insumo</label>
+                <select wire:model="insumo_id"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <option selected hidden value="">Selecciona un insumo</option>
+                    @foreach ($insumos_disponibles as $insumo)
+                        @if (!in_array($insumo->id, array_column($insumos_agregados, 'id')))
+                            <option value="{{ $insumo->id }}">
+                                {{ $insumo->nombre }} ({{ $insumo->categoria->nombre ?? 'Sin categoría' }})
+                            </option>
+                        @endif
+                    @endforeach
+                </select>
+
+                @error('insumo_id') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+            </div>
+
+            {{-- Cantidad --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+                <input type="number" step="0.01" wire:model.defer="cantidad_insumo"
+                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                @error('cantidad_insumo') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+            </div>
+
+            {{-- Unidad con datalist --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Unidad de medida</label>
+                <input type="text" list="unidades" wire:model.defer="unidad_insumo"
+                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+
+                <datalist id="unidades">
+                    @foreach($this->unidadesExistentes as $unidad)
+                        <option value="{{ $unidad }}">{{ $unidad }}</option>
+                    @endforeach
+                </datalist>
+
+                @error('unidad_insumo') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+            </div>
+
+
+            {{-- Botón agregar --}}
+            <div>
+                <button type="button" wire:click="agregarInsumo"
+                        class="bg-[#003844] text-white w-full px-4 py-2 rounded-md text-sm hover:bg-[#002f39]">
+                    Agregar insumo
+                </button>
+            </div>
+        </div>
+
+        {{-- Tabla de insumos agregados --}}
+        <div class="overflow-x-auto mt-4">
+            <table class="min-w-full text-sm text-left border border-gray-300">
+                <thead class="bg-gray-100 text-gray-700">
+                <tr>
+                    <th class="px-4 py-2 border">Nombre</th>
+                    <th class="px-4 py-2 border">Categoría</th>
+                    <th class="px-4 py-2 border">Cantidad</th>
+                    <th class="px-4 py-2 border">Unidad</th>
+                    <th class="px-4 py-2 border text-center">Acción</th>
+                </tr>
+                </thead>
+                <tbody>
+                @forelse ($insumos_agregados as $insumo)
+                    <tr class="border-t">
+                        <td class="px-4 py-2 border">{{ $insumo['nombre'] }}</td>
+                        <td class="px-4 py-2 border">{{ $insumo['categoria'] }}</td>
+                        <td class="px-4 py-2 border">{{ $insumo['cantidad'] }}</td>
+                        <td class="px-4 py-2 border">{{ $insumo['unidad'] }}</td>
+                        <td class="px-4 py-2 border text-center">
+                            <button type="button" wire:click="quitarInsumo({{ $insumo['id'] }})"
+                                    class="text-red-600 hover:underline text-xs">Eliminar</button>
+                        </td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" class="px-4 py-3 text-center text-gray-500">No se han agregado insumos.</td>
+                    </tr>
+                @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Error si no hay insumos --}}
+        @error('insumos_agregados')
+        <span class="text-xs text-red-600">{{ $message }}</span>
+        @enderror
+    </div>
+
+
+
     {{-- BOTONES --}}
     <div class="flex justify-end mt-6 gap-4">
         <a href="{{ route('servicios') }}"
