@@ -226,6 +226,123 @@
     </div>
 
 
+    {{-- CAMPOS PERSONALIZADOS --}}
+    <div class="bg-white rounded-lg shadow p-6 space-y-4 border border-gray-200 mt-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">Campos personalizados para el cliente</h2>
+
+        {{-- Lista de campos ya agregados --}}
+        @if (count($campos_personalizados) > 0)
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm text-left border border-gray-300">
+                    <thead class="bg-gray-100 text-gray-700">
+                    <tr>
+                        <th class="px-4 py-2 border">Nombre</th>
+                        <th class="px-4 py-2 border">Tipo</th>
+                        <th class="px-4 py-2 border">Opciones</th>
+                        <th class="px-4 py-2 border">Requerido</th>
+                        <th class="px-4 py-2 border">Activo</th>
+                        <th class="px-4 py-2 border text-center">Acción</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    @foreach ($campos_personalizados as $i => $campo)
+                        <tr class="border-t">
+                            <td class="px-4 py-2 border">{{ $campo['nombre'] }}</td>
+                            <td class="px-4 py-2 border capitalize">{{ $campo['tipo'] }}</td>
+                            <td class="px-4 py-2 border">
+                                @if($campo['tipo'] === 'select')
+                                    {{ implode(', ', $campo['opciones']) }}
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td class="px-4 py-2 border text-center">
+                                <span class="text-sm">{{ $campo['requerido'] ? 'Sí' : 'No' }}</span>
+                            </td>
+                            <td class="px-4 py-2 border text-center">
+                                <span class="text-sm">{{ $campo['activo'] ? 'Sí' : 'No' }}</span>
+                            </td>
+                            <td class="px-4 py-2 border text-center">
+                                <button type="button" wire:click="quitarCampoPersonalizado({{ $i }})"
+                                        class="text-red-600 hover:underline text-xs">Eliminar</button>
+                            </td>
+                        </tr>
+                    @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+
+        {{-- Formulario para agregar campo personalizado --}}
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end"
+             wire:key="formulario-campo-{{ count($campos_personalizados) }}">
+
+        {{-- Nombre del campo --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del campo</label>
+                <input type="text" wire:model.defer="campo_nombre"
+                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                @error('campo_nombre') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                @error('nombre_repetido')
+                <span class="text-xs text-red-600">{{ $message }}</span>
+                @enderror
+
+            </div>
+
+            {{-- Tipo de campo --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                <select wire:model.defer="campo_tipo"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <option value="texto">Texto</option>
+                    <option value="numero">Número</option>
+                    <option value="booleano">Sí/No</option>
+                    <option value="select">Lista de opciones</option>
+                </select>
+                @error('campo_tipo') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+            </div>
+
+            {{-- Opciones (si es select) --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Opciones (si aplica)</label>
+                <input type="text" wire:model.defer="campo_opciones"
+                       placeholder="Ej. Opción A, Opción B"
+                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                       @if($campo_tipo !== 'select') disabled @endif>
+                @error('opciones_invalidas')
+                <span class="text-xs text-red-600">{{ $message }}</span>
+                @enderror
+
+            </div>
+
+            {{-- Requerido y Activo --}}
+            <div class="grid grid-cols-2 gap-2">
+                <label class="flex items-center text-sm text-gray-700">
+                    <input type="checkbox" wire:model.defer="campo_requerido" class="mr-2 rounded">
+                    Requerido
+                </label>
+                <label class="flex items-center text-sm text-gray-700">
+                    <input type="checkbox" wire:model.defer="campo_activo" class="mr-2 rounded">
+                    Activo
+                </label>
+            </div>
+
+            {{-- Botón agregar --}}
+            <div class="col-span-1 sm:col-span-4">
+                <button type="button" wire:click="agregarCampoPersonalizado"
+                        class="bg-[#003844] text-white px-5 py-2 rounded-md text-sm hover:bg-[#002f39] w-full sm:w-auto">
+                    Agregar campo
+                </button>
+            </div>
+        </div>
+
+        @error('campos_personalizados')
+        <span class="text-xs text-red-600">{{ $message }}</span>
+        @enderror
+    </div>
+
+
+
 
     {{-- BOTONES --}}
     <div class="flex justify-end mt-6 gap-4">

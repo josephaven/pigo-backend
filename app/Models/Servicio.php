@@ -33,8 +33,10 @@ class Servicio extends Model
             ->withTimestamps();
     }
 
-    public function campos()
+
+    public function camposPersonalizados()
     {
-        return $this->hasMany(CampoPersonalizado::class);
+        return $this->hasMany(\App\Models\CampoPersonalizado::class);
     }
+
 }
