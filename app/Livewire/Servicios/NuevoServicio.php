@@ -69,7 +69,9 @@ class NuevoServicio extends Component
 
         if ($servicio) {
             $this->modo_edicion = true;
-            $registro = \App\Models\Servicio::findOrFail($servicio);
+
+            // Precargar servicio con campos personalizados y sus opciones
+            $registro = \App\Models\Servicio::with('camposPersonalizados.opciones')->findOrFail($servicio);
             $this->servicio_id = $registro->id;
 
             $this->fill($registro->only([
@@ -94,6 +96,19 @@ class NuevoServicio extends Component
                     'unidad' => $insumo->pivot->unidad,
                 ];
             })->toArray();
+
+            // Precargar campos personalizados
+            $this->campos_personalizados = $registro->camposPersonalizados->map(function ($campo) {
+                return [
+                    'nombre' => $campo->nombre,
+                    'tipo' => $campo->tipo,
+                    'requerido' => $campo->requerido,
+                    'activo' => true,
+                    'opciones' => $campo->tipo === 'select'
+                        ? $campo->opciones->pluck('valor')->toArray()
+                        : [],
+                ];
+            })->toArray();
         }
     }
 
@@ -115,6 +130,16 @@ class NuevoServicio extends Component
 
         if (count($this->insumos_agregados) === 0) {
             $this->addError('insumos_agregados', 'Debes agregar al menos un insumo.');
+            return;
+        }
+
+        // ⚠️ Validar que no haya campos personalizados con nombre duplicado
+        $duplicados = collect($this->campos_personalizados)
+            ->groupBy(fn($campo) => strtolower(trim($campo['nombre'])))
+            ->filter(fn($grupo) => $grupo->count() > 1);
+
+        if ($duplicados->isNotEmpty()) {
+            $this->addError('campos_personalizados', 'Hay campos personalizados con nombres duplicados.');
             return;
         }
 
@@ -159,10 +184,9 @@ class NuevoServicio extends Component
                 'nombre' => $campo['nombre'],
                 'tipo' => $campo['tipo'],
                 'requerido' => $campo['requerido'] ?? false,
-                'orden' => $i, // puedes ajustar el orden según el índice
+                'orden' => $i,
             ]);
 
-            // Si es tipo select, guardar las opciones
             if ($campo['tipo'] === 'select' && !empty($campo['opciones'])) {
                 foreach ($campo['opciones'] as $opcion) {
                     $nuevoCampo->opciones()->create(['valor' => $opcion]);

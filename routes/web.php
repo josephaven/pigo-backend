@@ -50,6 +50,6 @@ Route::middleware([
     // Módulo Servicios
     Route::get('/servicios', Servicios::class)->name('servicios');
     Route::get('/servicios/nuevo', NuevoServicio::class)->name('servicios.nuevo');
-    //Route::get('/servicios/editar/{servicio}', NuevoServicio::class)->name('servicios.editar');
+    Route::get('/servicios/editar/{servicio}', NuevoServicio::class)->name('servicios.editar');
     // Aquí puedes agregar otras rutas por módulo en el futuro...
 });

@@ -105,8 +105,7 @@
                                 Editar
                             </a>
 
-                            <button wire:click="eliminar({{ $servicio->id }})"
-                                    class="text-red-600 hover:underline text-xs">Eliminar</button>
+
                         </div>
                     </td>
                 </tr>

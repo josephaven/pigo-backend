@@ -5,9 +5,7 @@
 
     {{-- Título y botones --}}
     <div class="flex justify-between items-center mb-6">
-        <h2 class="text-xl font-semibold text-gray-800">
-            {{ $modo_edicion ? 'Editar servicio' : 'Crear nuevo servicio' }}
-        </h2>
+
 
         <a href="{{ route('servicios') }}"
            class="text-sm text-gray-600 hover:text-gray-800 hover:underline flex items-center gap-1">
@@ -292,7 +290,7 @@
             {{-- Tipo de campo --}}
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                <select wire:model.defer="campo_tipo"
+                <select wire:model.lazy="campo_tipo"
                         class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
                     <option value="texto">Texto</option>
                     <option value="numero">Número</option>
@@ -302,18 +300,20 @@
                 @error('campo_tipo') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
             </div>
 
-            {{-- Opciones (si es select) --}}
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Opciones (si aplica)</label>
-                <input type="text" wire:model.defer="campo_opciones"
-                       placeholder="Ej. Opción A, Opción B"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                       @if($campo_tipo !== 'select') disabled @endif>
-                @error('opciones_invalidas')
-                <span class="text-xs text-red-600">{{ $message }}</span>
-                @enderror
 
-            </div>
+            {{-- Opciones (si es select) --}}
+            @if($campo_tipo === 'select')
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Opciones (si aplica)</label>
+                    <input type="text" wire:model="campo_opciones"
+                           placeholder="Ej. Opción A, Opción B"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    @error('campo_opciones')
+                    <span class="text-xs text-red-600">{{ $message }}</span>
+                    @enderror
+                </div>
+            @endif
+
 
             {{-- Requerido y Activo --}}
             <div class="grid grid-cols-2 gap-2">
@@ -340,6 +340,73 @@
         <span class="text-xs text-red-600">{{ $message }}</span>
         @enderror
     </div>
+
+
+    {{-- Vista previa del servicio --}}
+    <div class="bg-white rounded-lg shadow p-6 space-y-4 border border-gray-200 mt-6">
+        <h2 class="text-lg font-semibold text-gray-800 mb-2">Vista previa del servicio</h2>
+
+        {{-- Datos generales --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
+            <p><span class="font-medium text-gray-800">Nombre:</span> {{ $nombre }}</p>
+            <p><span class="font-medium text-gray-800">Tipo de cobro:</span> {{ ucfirst($tipo_cobro) }}</p>
+            <p><span class="font-medium text-gray-800">Precio normal:</span> ${{ number_format($precio_normal, 2) }}</p>
+            <p><span class="font-medium text-gray-800">Precio maquilador:</span> ${{ number_format($precio_maquilador, 2) }}</p>
+            @if ($usar_cobro_minimo)
+                <p><span class="font-medium text-gray-800">Precio mínimo:</span> ${{ number_format($precio_minimo, 2) }}</p>
+            @endif
+            <p><span class="font-medium text-gray-800">Estado:</span> {{ $activo ? 'Activo' : 'Inactivo' }}</p>
+        </div>
+
+        {{-- Sucursales --}}
+        <div>
+            <p class="text-sm font-semibold text-gray-800 mb-1">Sucursales asociadas:</p>
+            <ul class="list-disc list-inside text-sm text-gray-700">
+                @forelse ($sucursales_disponibles as $sucursal)
+                    @if(in_array($sucursal->id, $sucursales_seleccionadas))
+                        <li>{{ $sucursal->nombre }}</li>
+                    @endif
+                @empty
+                    <li class="text-gray-500 italic">Ninguna sucursal seleccionada.</li>
+                @endforelse
+            </ul>
+        </div>
+
+        {{-- Insumos --}}
+        @if (count($insumos_agregados))
+            <div>
+                <p class="text-sm font-semibold text-gray-800 mb-1">Insumos requeridos:</p>
+                <ul class="list-disc list-inside text-sm text-gray-700">
+                    @foreach ($insumos_agregados as $insumo)
+                        <li>{{ $insumo['nombre'] }} — {{ $insumo['cantidad'] }} {{ $insumo['unidad'] }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- Campos personalizados --}}
+        @if (count($campos_personalizados))
+            <div>
+                <p class="text-sm font-semibold text-gray-800 mb-1">Campos personalizados del cliente:</p>
+                <ul class="list-disc list-inside text-sm text-gray-700">
+                    @foreach ($campos_personalizados as $campo)
+                        <li>
+                            <span class="font-medium">{{ $campo['nombre'] }}</span>
+                            <span class="text-gray-600">({{ ucfirst($campo['tipo']) }})</span>
+                            @if($campo['requerido'])
+                                <span class="text-red-600 font-semibold ml-1">[Requerido]</span>
+                            @endif
+                            @if($campo['tipo'] === 'select')
+                                <br><span class="text-gray-600 ml-2">Opciones: {{ implode(', ', $campo['opciones']) }}</span>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+    </div>
+
+
 
 
 
