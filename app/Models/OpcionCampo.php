@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class OpcionCampo extends Model
 {
     use HasFactory;
+    protected $table = 'opciones_campo';
+
 
     protected $fillable = [
         'campo_personalizado_id',

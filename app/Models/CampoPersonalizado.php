@@ -9,6 +9,8 @@ class CampoPersonalizado extends Model
 {
     use HasFactory;
 
+    protected $table = 'campos_personalizados';
+
     protected $fillable = [
         'servicio_id',
         'nombre',
@@ -24,7 +26,8 @@ class CampoPersonalizado extends Model
 
     public function opciones()
     {
-        return $this->hasMany(OpcionCampo::class);
+        return $this->hasMany(\App\Models\OpcionCampo::class);
     }
+
 }
 
