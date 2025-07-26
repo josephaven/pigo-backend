@@ -1,4 +1,4 @@
-<div x-data="{ sidebarAbierta: false, sidebarColapsada: false }" class="relative flex">
+<div class="relative flex">
 
 
 
@@ -60,39 +60,39 @@
                     </div>
 
                     <nav class="space-y-2 text-sm">
-                        <a href="/dashboard" class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+                        <a href="/dashboard" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.home />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Inicio</span>
                         </a>
-                        <a href="/whatsapp" class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+                        <a href="/whatsapp" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.message-square />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Whatsapp</span>
                         </a>
-                        <a href="/clientes" class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+                        <a href="/clientes" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.user />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Clientes</span>
                         </a>
-                        <a href="/pedidos" class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+                        <a href="/pedidos" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.file-text />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Pedidos</span>
                         </a>
-                        <a href="/servicios" class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+                        <a href="/servicios" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.check-circle />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Servicios</span>
                         </a>
-                        <a href="/inventario" class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+                        <a href="/inventario" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.boxes />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Inventario</span>
                         </a>
-                        <a href="/reportes" class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+                        <a href="/reportes" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.bar-chart />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Reportes</span>
                         </a>
-                        <a href="/historial" class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+                        <a href="/historial" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.history />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Historial</span>
                         </a>
-                        <a href="/configuracion" class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+                        <a href="/configuracion" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.settings />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Configuración</span>
                         </a>

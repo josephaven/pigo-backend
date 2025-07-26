@@ -13,31 +13,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="preload" as="image" href="{{ asset('img/logo-pigo-blanco.svg') }}">
 
-
     {{-- Estilos y scripts --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 
-    {{-- Ocultar elementos con x-cloak hasta que Alpine.js esté listo --}}
     <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body class="font-[Poppins] antialiased bg-gray-100">
+
+<body x-data="{ sidebarAbierta: false, sidebarColapsada: $persist(false).as('sidebar_colapsada_estado') }"
+      x-cloak
+      class="font-[Poppins] antialiased bg-[#0D374B]">
+
 <x-banner />
 
-{{-- Contenedor responsive: sidebar arriba en móviles, al lado en pantallas grandes --}}
 <div class="min-h-screen flex flex-col sm:flex-row">
 
-    {{-- Sidebar --}}
-    <aside class="w-full sm:w-64 bg-[#003844] text-white">
-        @include('layouts.sidebar')
-    </aside>
+    {{-- Sidebar (no debe tener x-data dentro) --}}
+    @include('layouts.sidebar')
 
     {{-- Contenido principal --}}
     <main class="flex-1 p-4 sm:p-6 bg-gray-100">
         {{-- Título principal --}}
         @if(View::hasSection('title') || View::hasSection('action'))
             <div class="flex justify-between items-center mb-4 sm:mb-6">
-            @hasSection('title')
+                @hasSection('title')
                     <h1 class="text-3xl font-bold">@yield('title')</h1>
                 @endif
 
@@ -55,15 +54,22 @@
             </div>
         @endif
 
-
         {{ $slot }}
     </main>
-
 
 </div>
 
 @stack('modals')
-<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+{{-- Alpine con persist correctamente inicializado --}}
+<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/persist@3.x.x/dist/cdn.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.plugin(window.persist)
+    })
+</script>
+
 @livewireScripts
 
 @include('components.toast')
