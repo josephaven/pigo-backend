@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
@@ -24,13 +23,13 @@
 <body class="font-[Poppins] antialiased bg-gray-100">
 <x-banner />
 
-{{-- Contenedor responsive: sidebar arriba en móviles, al lado en pantallas grandes --}}
-<div class="min-h-screen flex flex-col sm:flex-row">
+{{-- Contenedor principal con control de sidebar --}}
+<div
+    x-data="{ sidebarAbierta: false, sidebarColapsada: false }"
+    class="min-h-screen flex flex-col sm:flex-row">
 
     {{-- Sidebar --}}
-    <aside class="w-full sm:w-64 bg-[#003844] text-white">
-        @include('layouts.sidebar')
-    </aside>
+    @include('layouts.sidebar')
 
     {{-- Contenido principal --}}
     <main class="flex-1 p-4 sm:p-6 bg-gray-100">
@@ -53,18 +52,5 @@
             <div class="mb-2">
                 @yield('tabs')
             </div>
-        @endif
+@endif
 
-
-        {{ $slot }}
-    </main>
-
-
-</div>
-
-@stack('modals')
-@livewireScripts
-<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-@include('components.toast')
-</body>
-</html>
