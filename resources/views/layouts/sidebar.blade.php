@@ -27,7 +27,7 @@
         ]"
         class="fixed sm:relative top-0 left-0 min-h-screen
                bg-[#0D374B] text-white px-4 py-6 flex flex-col font-[Poppins] z-50
-               transition-transform duration-300 ease-in-out transform overflow-y-auto"
+               transition-transform duration-300 ease-in-out transform overflow-visible"
     >
 
         {{-- Contenido interno del sidebar --}}
@@ -60,58 +60,173 @@
                     </div>
 
                     <nav class="space-y-2 text-sm">
-                        <a href="/dashboard" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+
+                        {{-- === INICIO === --}}
+                        <a href="/dashboard" wire:navigate class="sidebar-link group relative flex items-center"
+                           :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.home />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Inicio</span>
+                            <div
+                                :class="{ 'hidden': !sidebarColapsada }"
+                                class="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                <div class="relative bg-gray-800 text-white text-xs px-3 py-1 rounded shadow-lg whitespace-nowrap">
+                                    Inicio
+                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-0 h-0 border-y-6 border-y-transparent border-r-6 border-r-gray-800"></div>
+                                </div>
+                            </div>
                         </a>
-                        <a href="/whatsapp" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+
+                        {{-- === WHATSAPP === --}}
+                        <a href="/whatsapp" wire:navigate class="sidebar-link group relative flex items-center"
+                           :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.message-square />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Whatsapp</span>
+                            <div
+                                :class="{ 'hidden': !sidebarColapsada }"
+                                class="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                <div class="relative bg-gray-800 text-white text-xs px-3 py-1 rounded shadow-lg whitespace-nowrap">
+                                    Whatsapp
+                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-0 h-0 border-y-6 border-y-transparent border-r-6 border-r-gray-800"></div>
+                                </div>
+                            </div>
                         </a>
-                        <a href="/clientes" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+
+                        {{-- === CLIENTES === --}}
+                        <a href="/clientes" wire:navigate class="sidebar-link group relative flex items-center"
+                           :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.user />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Clientes</span>
+                            <div
+                                :class="{ 'hidden': !sidebarColapsada }"
+                                class="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                <div class="relative bg-gray-800 text-white text-xs px-3 py-1 rounded shadow-lg whitespace-nowrap">
+                                    Clientes
+                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-0 h-0 border-y-6 border-y-transparent border-r-6 border-r-gray-800"></div>
+                                </div>
+                            </div>
                         </a>
-                        <a href="/pedidos" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+
+                        {{-- === PEDIDOS === --}}
+                        <a href="/pedidos" wire:navigate class="sidebar-link group relative flex items-center"
+                           :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.file-text />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Pedidos</span>
+                            <div
+                                :class="{ 'hidden': !sidebarColapsada }"
+                                class="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                <div class="relative bg-gray-800 text-white text-xs px-3 py-1 rounded shadow-lg whitespace-nowrap">
+                                    Pedidos
+                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-0 h-0 border-y-6 border-y-transparent border-r-6 border-r-gray-800"></div>
+                                </div>
+                            </div>
                         </a>
-                        <a href="/servicios" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+
+                        {{-- === SERVICIOS === --}}
+                        <a href="/servicios" wire:navigate class="sidebar-link group relative flex items-center"
+                           :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.check-circle />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Servicios</span>
+                            <div
+                                :class="{ 'hidden': !sidebarColapsada }"
+                                class="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                <div class="relative bg-gray-800 text-white text-xs px-3 py-1 rounded shadow-lg whitespace-nowrap">
+                                    Servicios
+                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-0 h-0 border-y-6 border-y-transparent border-r-6 border-r-gray-800"></div>
+                                </div>
+                            </div>
                         </a>
-                        <a href="/inventario" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+
+                        {{-- === INVENTARIO === --}}
+                        <a href="/inventario" wire:navigate class="sidebar-link group relative flex items-center"
+                           :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.boxes />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Inventario</span>
+                            <div
+                                :class="{ 'hidden': !sidebarColapsada }"
+                                class="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                <div class="relative bg-gray-800 text-white text-xs px-3 py-1 rounded shadow-lg whitespace-nowrap">
+                                    Inventario
+                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-0 h-0 border-y-6 border-y-transparent border-r-6 border-r-gray-800"></div>
+                                </div>
+                            </div>
                         </a>
-                        <a href="/reportes" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+
+                        {{-- === REPORTES === --}}
+                        <a href="/reportes" wire:navigate class="sidebar-link group relative flex items-center"
+                           :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.bar-chart />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Reportes</span>
+                            <div
+                                :class="{ 'hidden': !sidebarColapsada }"
+                                class="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                <div class="relative bg-gray-800 text-white text-xs px-3 py-1 rounded shadow-lg whitespace-nowrap">
+                                    Reportes
+                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-0 h-0 border-y-6 border-y-transparent border-r-6 border-r-gray-800"></div>
+                                </div>
+                            </div>
                         </a>
-                        <a href="/historial" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+
+                        {{-- === HISTORIAL === --}}
+                        <a href="/historial" wire:navigate class="sidebar-link group relative flex items-center"
+                           :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.history />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Historial</span>
+                            <div
+                                :class="{ 'hidden': !sidebarColapsada }"
+                                class="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                <div class="relative bg-gray-800 text-white text-xs px-3 py-1 rounded shadow-lg whitespace-nowrap">
+                                    Historial
+                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-0 h-0 border-y-6 border-y-transparent border-r-6 border-r-gray-800"></div>
+                                </div>
+                            </div>
                         </a>
-                        <a href="/configuracion" wire:navigate class="sidebar-link flex items-center" :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
+
+                        {{-- === CONFIGURACIÓN === --}}
+                        <a href="/configuracion" wire:navigate class="sidebar-link group relative flex items-center"
+                           :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                             <x-icons.settings />
                             <span x-show="!sidebarColapsada" class="transition-opacity">Configuración</span>
+                            <div
+                                :class="{ 'hidden': !sidebarColapsada }"
+                                class="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                                <div class="relative bg-gray-800 text-white text-xs px-3 py-1 rounded shadow-lg whitespace-nowrap">
+                                    Configuración
+                                    <div class="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-0 h-0 border-y-6 border-y-transparent border-r-6 border-r-gray-800"></div>
+                                </div>
+                            </div>
                         </a>
+
                     </nav>
+
+
                 </div>
             </div>
 
             <div class="pt-3 border-t border-white/10">
                 <a href="{{ route('logout') }}"
                    onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
-                   class="sidebar-link flex items-center mt-3"
+                   class="sidebar-link group relative flex items-center mt-3"
                    :class="sidebarColapsada ? 'justify-center' : 'space-x-2'">
                     <x-icons.log-out />
                     <span x-show="!sidebarColapsada" class="transition-opacity">Cerrar sesión</span>
+
+                    {{-- Tooltip flotante al colapsar --}}
+                    <div
+                        :class="{ 'hidden': !sidebarColapsada }"
+                        class="absolute left-full top-1/2 -translate-y-1/2 ml-3 z-50 opacity-0 group-hover:opacity-100 transition pointer-events-none">
+                        <div class="relative bg-gray-800 text-white text-xs px-3 py-1 rounded shadow-lg whitespace-nowrap">
+                            Cerrar sesión
+                            <div class="absolute left-0 top-1/2 -translate-y-1/2 -ml-2 w-0 h-0
+                            border-y-6 border-y-transparent border-r-6 border-r-gray-800"></div>
+                        </div>
+                    </div>
                 </a>
+
                 <form id="logout-form" action="{{ route('logout') }}" method="POST" class="hidden">
                     @csrf
                 </form>
             </div>
+
 
 
 
