@@ -22,6 +22,12 @@
     <style>[x-cloak] { display: none !important; }</style>
 </head>
 <body class="font-[Poppins] antialiased bg-gray-100">
+    <script>
+        // Este script se ejecuta inmediatamente para evitar el parpadeo (FOUC)
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.body.classList.add('sidebar-colapsada');
+        }
+    </script>
 <x-banner />
 
 {{-- Contenedor responsive: sidebar arriba en móviles, al lado en pantallas grandes --}}
@@ -70,8 +76,28 @@
         const toggleMobile = document.getElementById('btn-sidebar-toggle');
         const sidebarContainer = document.getElementById('sidebar-container');
         const toggleDesktop = document.getElementById('btn-toggle-sidebar');
+        const body = document.body;
 
-        // 👉 Mostrar/ocultar sidebar en móvil
+        // --- LÓGICA DEL SIDEBAR EN ESCRITORIO CON LOCALSTORAGE ---
+
+        // 1. Al cargar la página, revisa el estado guardado en localStorage
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            body.classList.add('sidebar-colapsada');
+        }
+
+        // 2. Al hacer clic en el botón de escritorio, alterna la clase y guarda el estado
+        toggleDesktop?.addEventListener('click', () => {
+            body.classList.toggle('sidebar-colapsada');
+            // Guarda la preferencia en localStorage
+            if (body.classList.contains('sidebar-colapsada')) {
+                localStorage.setItem('sidebarCollapsed', 'true');
+            } else {
+                localStorage.removeItem('sidebarCollapsed');
+            }
+        });
+
+
+        // --- LÓGICA DEL SIDEBAR EN MÓVIL (SIN CAMBIOS) ---
         toggleMobile?.addEventListener('click', () => {
             if (sidebarContainer.classList.contains('hidden')) {
                 sidebarContainer.classList.remove('hidden');
@@ -80,11 +106,6 @@
                 sidebarContainer.classList.remove('block');
                 sidebarContainer.classList.add('hidden');
             }
-        });
-
-        // 👉 Contraer/expandir sidebar en escritorio
-        toggleDesktop?.addEventListener('click', () => {
-            document.body.classList.toggle('sidebar-colapsada');
         });
     });
 </script>
