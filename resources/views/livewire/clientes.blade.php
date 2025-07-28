@@ -6,7 +6,7 @@
 @section('action')
     <button
         onclick="window.dispatchEvent(new CustomEvent('abrir-modal-cliente'))"
-        class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-[#002f39] transition">
+        class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center justify-center sm:justify-start gap-2 hover:bg-[#002f39] transition w-full sm:w-auto">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
@@ -14,7 +14,7 @@
     </button>
 @endsection
 
-<div class="p-4 sm:p-6 font-[Poppins]">
+<div class="px-4 py-4 sm:px-6 sm:py-6 font-[Poppins]">
     <script>
         window.addEventListener('abrir-modal-cliente', () => {
             Livewire.dispatch('abrirModalExterno');
@@ -22,12 +22,12 @@
     </script>
 
     {{-- Filtros --}}
-    <div class="flex flex-wrap gap-4 mb-4 items-end">
+    <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
         <input wire:model.defer="filtro_nombre" wire:key="{{ $filtroKey }}-nombre" type="text" placeholder="Nombre"
-               class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[160px]" />
+               class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full" />
 
         <select wire:model.defer="filtro_tipo" wire:key="{{ $filtroKey }}-tipo"
-                class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[120px]">
+                class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
             <option value="">Tipo</option>
             <option value="Normal">Normal</option>
             <option value="Frecuente">Frecuente</option>
@@ -35,13 +35,13 @@
         </select>
 
         <input wire:model.defer="filtro_telefono" wire:key="{{ $filtroKey }}-telefono" type="text" placeholder="Teléfono"
-               class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[120px]" />
+               class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full" />
 
         <input wire:model.defer="filtro_ocupacion" wire:key="{{ $filtroKey }}-ocupacion" type="text" placeholder="Ocupación"
-               class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[160px]" />
+               class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full" />
 
         <select wire:model.defer="filtro_mes_nacimiento" wire:key="{{ $filtroKey }}-mes"
-                class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[155px]">
+                class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
             <option value="">Mes nacimiento</option>
             <option value="01">Enero</option>
             <option value="02">Febrero</option>
@@ -58,14 +58,14 @@
         </select>
 
         <select wire:model.defer="filtro_anio_nacimiento" wire:key="{{ $filtroKey }}-anio"
-                class="border border-gray-300 rounded-md px-3 py-2 text-sm w-[150px]">
+                class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
             <option value="">Año nacimiento</option>
             @for ($a = now()->year; $a >= 1950; $a--)
                 <option value="{{ $a }}">{{ $a }}</option>
             @endfor
         </select>
 
-        <div class="flex gap-2 w-full sm:w-auto">
+        <div class="flex flex-col sm:flex-row gap-2 col-span-1 md:col-span-2">
             <button wire:click="filtrar"
                     class="bg-[#003844] text-white px-4 py-2 rounded-md text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-[#002f39] transition w-full sm:w-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"

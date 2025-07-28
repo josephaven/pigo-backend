@@ -9,7 +9,7 @@
 @section('action')
     <button
         onclick="window.dispatchEvent(new CustomEvent('abrir-modal-categoria'))"
-        class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-[#002f39] transition">
+        class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center justify-center sm:justify-start gap-2 hover:bg-[#002f39] transition w-full sm:w-auto">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
@@ -17,7 +17,7 @@
     </button>
 @endsection
 
-<div class="p-4 sm:p-6 font-[Poppins]">
+<div class="px-4 py-4 sm:px-6 sm:py-6 font-[Poppins]">
     <script>
         window.addEventListener('abrir-modal-categoria', () => {
             Livewire.dispatch('abrirModal');
@@ -70,7 +70,7 @@
 
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">Descripción</label>
-                    <textarea wire:model.defer="descripcion" rows="3"
+                    <textarea wire:model.defer="descripcion"
                               class="w-full px-3 py-2 border rounded-md text-sm"></textarea>
                 </div>
 

@@ -9,7 +9,7 @@
 @section('action')
     <button
         onclick="window.dispatchEvent(new CustomEvent('abrir-modal-insumo'))"
-        class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-[#002f39] transition">
+        class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center justify-center sm:justify-start gap-2 hover:bg-[#002f39] transition w-full sm:w-auto">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
@@ -18,7 +18,7 @@
 @endsection
 
 
-<div class="p-4 sm:p-6 font-[Poppins]">
+<div class="px-4 py-4 sm:px-6 sm:py-6 font-[Poppins]">
     <script>
         window.addEventListener('abrir-modal-insumo', () => {
             Livewire.dispatch('abrirModalExterno');
@@ -28,12 +28,12 @@
 
 
     {{-- Filtros --}}
-    <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+    <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
         <input type="text" wire:model.defer="filtro_nombre" wire:key="{{ $filtroKey }}-nombre" placeholder="Nombre"
-               class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+               class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
 
         <select wire:model.defer="filtro_categoria" wire:key="{{ $filtroKey }}-categoria"
-                class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
             <option value="">Categoría</option>
             @foreach($categorias as $categoria)
                 <option value="{{ $categoria->id }}">{{ $categoria->nombre }}</option>
@@ -41,7 +41,7 @@
         </select>
 
         <select wire:model.defer="filtro_alerta" wire:key="{{ $filtroKey }}-alerta"
-                class="border border-gray-300 rounded-md px-3 py-2 text-sm">
+                class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full">
             <option value="">Alertas</option>
             <option value="Normal">Normal</option>
             <option value="Bajo stock">Bajo stock</option>
@@ -49,7 +49,7 @@
 
         </select>
 
-        <div class="flex gap-2">
+        <div class="flex flex-col sm:flex-row gap-2 col-span-1 md:col-span-2">
             <button wire:click="filtrar"
                     class="bg-[#003844] text-white px-4 py-2 rounded-md text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-[#002f39] transition w-full sm:w-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
@@ -180,12 +180,13 @@
                                         @foreach($variante->stockSucursales as $stock)
                                             <tr class="bg-white">
                                                 @foreach(json_decode($variante->atributos ?? '[]', true) as $valor)
-                                                    <td class="px-3 py-1">{{ $valor }}</td>
+                                                    <td class="px-2 py-1 whitespace-nowrap">
+                                                        {{ $valor }}</td>
                                                 @endforeach
-                                                <td class="px-3 py-1">{{ $stock->sucursal->nombre }}</td>
-                                                <td class="px-3 py-1">{{ (int) $stock->cantidad_actual }}</td>
-                                                <td class="px-3 py-1">{{ (int) $stock->stock_minimo }}</td>
-                                                <td class="px-3 py-1">
+                                                <td class="px-2 py-1 whitespace-nowrap">{{ $stock->sucursal->nombre }}</td>
+                                                <td class="px-2 py-1 whitespace-nowrap">{{ (int) $stock->cantidad_actual }}</td>
+                                                <td class="px-2 py-1 whitespace-nowrap">{{ (int) $stock->stock_minimo }}</td>
+                                                <td class="px-2 py-1 whitespace-nowrap">
                                                     @if($stock->cantidad_actual == 0)
                                                         <span class="text-red-600 font-medium">Sin stock</span>
                                                     @elseif($stock->cantidad_actual < $stock->stock_minimo)
@@ -420,13 +421,13 @@
                     </div>
                 @endif
 
-                <div class="flex justify-end gap-2 mt-6">
+                <div class="flex flex-col sm:flex-row justify-end gap-2 sm:gap-4 mt-6">
                     <button wire:click="cerrarModal"
-                            class="px-4 py-2 bg-gray-200 rounded-md text-sm hover:bg-gray-300">
+                            class="px-4 py-2 bg-gray-200 rounded-md text-sm hover:bg-gray-300 w-full sm:w-auto">
                         Cancelar
                     </button>
                     <button wire:click="guardar"
-                            class="px-4 py-2 bg-[#003844] text-white rounded-md text-sm hover:bg-[#002f39]">
+                            class="px-4 py-2 bg-[#003844] text-white rounded-md text-sm hover:bg-[#002f39] w-full sm:w-auto">
                         Guardar
                     </button>
                 </div>

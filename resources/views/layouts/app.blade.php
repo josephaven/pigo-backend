@@ -43,7 +43,7 @@
 
     {{-- Título principal --}}
         @if(View::hasSection('title') || View::hasSection('action'))
-            <div class="flex justify-between items-center mb-4 sm:mb-6">
+            <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0 mb-4 sm:mb-6">
                 @hasSection('title')
                     <h1 class="text-3xl font-bold">@yield('title')</h1>
                 @endif

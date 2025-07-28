@@ -1,7 +1,7 @@
 
 @section('title', $modo_edicion ? 'Editar servicio' : 'Nuevo servicio')
 
-<div class="p-4 sm:p-6 font-[Poppins] max-w-5xl mx-auto">
+<div class="px-4 py-4 sm:px-6 sm:py-6 font-[Poppins]">
 
     {{-- Título y botones --}}
     <div class="flex justify-between items-center mb-6">

@@ -1,4 +1,4 @@
-<div class="py-10 px-4 sm:px-6 max-w-7xl mx-auto font-[Poppins]">
+<div class="px-4 py-4 sm:px-6 sm:py-6 font-[Poppins]">
 
     {{-- Encabezado: Bienvenida + Rol + Selector --}}
     <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">

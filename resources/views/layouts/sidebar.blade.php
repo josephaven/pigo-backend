@@ -12,7 +12,7 @@
 
 {{-- Sidebar contenedor (ocultable en móvil y colapsable en escritorio) --}}
 <div id="sidebar-container"
-     class="fixed top-[48px] left-0 bottom-0 z-40 sm:relative sm:top-0 sm:z-0 flex flex-col transition-all duration-300 bg-[#0D374B] text-white font-[Poppins] w-64 sm:w-64 overflow-visible sm:flex">
+     class="hidden sm:flex fixed top-[48px] left-0 bottom-0 z-40 sm:relative sm:top-0 sm:z-0 flex-col transition-all duration-300 bg-[#0D374B] text-white font-[Poppins] w-64 sm:w-64 overflow-visible">
 
     {{-- Contenido interno --}}
     <div class="flex-1 px-4 py-4 flex flex-col">

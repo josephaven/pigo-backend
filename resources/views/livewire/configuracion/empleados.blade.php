@@ -7,17 +7,20 @@
 @endsection
 
 @section('action')
-    <button
-        onclick="window.dispatchEvent(new CustomEvent('abrir-modal-empleado'))"
-        class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-[#002f39] transition">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-        Nuevo empleado
-    </button>
+    <div class="w-full sm:w-auto">
+        <button
+            onclick="window.dispatchEvent(new CustomEvent('abrir-modal-empleado'))"
+            class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center justify-center sm:justify-start gap-2 hover:bg-[#002f39] transition w-full sm:w-auto">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            Nuevo empleado
+        </button>
+    </div>
 @endsection
 
-<div class="p-4 sm:p-6 font-[Poppins]">
+
+<div class="px-4 py-4 sm:px-6 sm:py-6 font-[Poppins]">
     <script>
         window.addEventListener('abrir-modal-empleado', () => {
             Livewire.dispatch('abrirModalExterno');
@@ -25,7 +28,7 @@
     </script>
 
     {{-- Filtros Responsivos --}}
-    <div class="grid grid-cols-1 sm:grid-cols-6 gap-4 mb-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-4">
         <input wire:model.defer="filtro_nombre" wire:key="{{ $filtroKey }}-nombre" type="text" placeholder="Nombre"
                class="col-span-1 border border-gray-300 rounded-md px-3 py-2 text-sm w-full" />
 
@@ -52,7 +55,7 @@
             @endforeach
         </select>
 
-        <div class="flex flex-col sm:flex-row gap-2 col-span-1 sm:col-span-2">
+        <div class="flex flex-col sm:flex-row gap-2 col-span-1 md:col-span-2">
             <button wire:click="filtrar"
                     class="bg-[#003844] text-white px-4 py-2 rounded-md text-xs sm:text-sm flex items-center justify-center gap-2 hover:bg-[#002f39] transition w-full sm:w-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
@@ -78,7 +81,7 @@
     </div>
 
     {{-- Tabla --}}
-    <div class="overflow-x-auto bg-white shadow rounded-lg">
+    <div class="overflow-x-auto w-full bg-white shadow rounded-lg">
         <table class="min-w-full text-xs sm:text-sm text-left border-separate border-spacing-y-2">
             <thead class="text-gray-600 bg-gray-100">
             <tr>
@@ -128,11 +131,11 @@
     @if($modal_abierto)
         <div wire:key="{{ $modalKey }}"
              class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4"
+            <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-2xl mx-4 sm:mx-auto"
                  x-data
                  @keydown.enter.prevent="$wire.guardar()">
 
-                <h2 class="text-xl sm:text-2xl font-bold mb-6">
+                <h2 class="text-xl sm:text-2xl font-bold mb-6 text-center sm:text-left">
                     {{ $modo_edicion ? 'Editar empleado' : 'Nuevo empleado' }}
                 </h2>
 
@@ -228,13 +231,13 @@
                 </div>
 
 
-                <div class="mt-6 flex flex-col sm:flex-row justify-end gap-2">
+                <div class="mt-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
                     <button wire:click="cerrarModal"
-                            class="px-4 py-2 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300">
+                            class="px-4 py-2 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300 w-full sm:w-auto">
                         Cancelar
                     </button>
                     <button wire:click="guardar"
-                            class="px-4 py-2 rounded-md bg-[#003844] text-white text-sm hover:bg-[#002f39]">
+                            class="px-4 py-2 rounded-md bg-[#003844] text-white text-sm hover:bg-[#002f39] w-full sm:w-auto">
                         Guardar
                     </button>
                 </div>

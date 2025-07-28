@@ -9,7 +9,7 @@
 @section('action')
     <button
         onclick="window.dispatchEvent(new CustomEvent('abrir-modal-metodo'))"
-        class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center gap-2 hover:bg-[#002f39] transition">
+        class="bg-[#003844] text-white px-4 py-2 rounded-md text-sm flex items-center justify-center sm:justify-start gap-2 hover:bg-[#002f39] transition w-full sm:w-auto">
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
         </svg>
@@ -17,7 +17,7 @@
     </button>
 @endsection
 
-<div class="p-4 sm:p-6 font-[Poppins]">
+<div class="px-4 py-4 sm:px-6 sm:py-6 font-[Poppins]">
     <script>
         window.addEventListener('abrir-modal-metodo', () => {
             Livewire.dispatch('abrirModalExterno');
@@ -147,13 +147,13 @@
                     </div>
                 </div>
 
-                <div class="mt-6 flex flex-col sm:flex-row justify-end gap-2">
+                <div class="mt-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-4">
                     <button wire:click="cerrarModal"
-                            class="px-4 py-2 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300">
+                            class="px-4 py-2 rounded-md bg-gray-200 text-gray-800 text-sm hover:bg-gray-300 w-full sm:w-auto">
                         Cancelar
                     </button>
                     <button wire:click="guardar"
-                            class="px-4 py-2 rounded-md bg-[#003844] text-white text-sm hover:bg-[#002f39]">
+                            class="px-4 py-2 rounded-md bg-[#003844] text-white text-sm hover:bg-[#002f39] w-full sm:w-auto">
                         Guardar
                     </button>
                 </div>
