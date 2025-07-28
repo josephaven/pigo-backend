@@ -28,13 +28,13 @@
 <div class="min-h-screen flex flex-col sm:flex-row">
 
     {{-- Sidebar --}}
-    <aside class="w-full sm:w-64 bg-[#003844] text-white">
-        @include('layouts.sidebar')
-    </aside>
+    @include('layouts.sidebar')
 
     {{-- Contenido principal --}}
-    <main class="flex-1 p-4 sm:p-6 bg-gray-100">
-        {{-- Título principal --}}
+    <main class="flex-1 p-4 sm:p-6 pt-14 sm:pt-6 bg-gray-100">
+
+
+    {{-- Título principal --}}
         @if(View::hasSection('title') || View::hasSection('action'))
             <div class="flex justify-between items-center mb-4 sm:mb-6">
                 @hasSection('title')
@@ -64,7 +64,25 @@
 
 @stack('modals')
 @livewireScripts
-<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const toggleBtn = document.getElementById('btn-sidebar-toggle');
+        const sidebarContainer = document.getElementById('sidebar-container');
+
+        toggleBtn?.addEventListener('click', () => {
+            if (sidebarContainer.classList.contains('hidden')) {
+                sidebarContainer.classList.remove('hidden');
+                sidebarContainer.classList.add('block');
+            } else {
+                sidebarContainer.classList.remove('block');
+                sidebarContainer.classList.add('hidden');
+            }
+        });
+
+    });
+</script>
+
+
 @include('components.toast')
 </body>
 </html>
