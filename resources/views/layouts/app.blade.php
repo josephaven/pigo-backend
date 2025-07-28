@@ -25,7 +25,8 @@
 <x-banner />
 
 {{-- Contenedor responsive: sidebar arriba en móviles, al lado en pantallas grandes --}}
-<div class="min-h-screen flex flex-col sm:flex-row">
+<div class="min-h-screen flex flex-col sm:flex-row overflow-visible relative z-0 pr-10">
+
 
     {{-- Sidebar --}}
     @include('layouts.sidebar')
@@ -66,10 +67,12 @@
 @livewireScripts
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        const toggleBtn = document.getElementById('btn-sidebar-toggle');
+        const toggleMobile = document.getElementById('btn-sidebar-toggle');
         const sidebarContainer = document.getElementById('sidebar-container');
+        const toggleDesktop = document.getElementById('btn-toggle-sidebar');
 
-        toggleBtn?.addEventListener('click', () => {
+        // 👉 Mostrar/ocultar sidebar en móvil
+        toggleMobile?.addEventListener('click', () => {
             if (sidebarContainer.classList.contains('hidden')) {
                 sidebarContainer.classList.remove('hidden');
                 sidebarContainer.classList.add('block');
@@ -79,8 +82,13 @@
             }
         });
 
+        // 👉 Contraer/expandir sidebar en escritorio
+        toggleDesktop?.addEventListener('click', () => {
+            document.body.classList.toggle('sidebar-colapsada');
+        });
     });
 </script>
+
 
 
 @include('components.toast')

@@ -53,4 +53,56 @@ body {
     .sidebar-link.logout:hover svg {
         @apply stroke-red-400;
     }
+
+    /* === SIDEBAR COLAPSADA EN ESCRITORIO === */
+
+    body.sidebar-colapsada #sidebar-container {
+        @apply w-16 min-w-[4rem];
+    }
+
+    body.sidebar-colapsada .sidebar-label {
+        @apply hidden;
+    }
+
+    body.sidebar-colapsada .sidebar-logo {
+        @apply h-8;
+    }
+
+    body.sidebar-colapsada .sidebar-link {
+        @apply flex-col justify-center items-center gap-1 px-0 py-2;
+    }
+
+    body.sidebar-colapsada .sidebar-link svg {
+        @apply mx-auto;
+    }
+
+    .sidebar-tooltip {
+        @apply hidden absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2 py-1 text-xs rounded bg-black text-white whitespace-nowrap z-[999];
+    }
+
+
+    body.sidebar-colapsada .sidebar-link.group:hover .sidebar-tooltip {
+        @apply inline-block;
+    }
+
+    /* Reduce el margen inferior del logo */
+    body.sidebar-colapsada #logo-wrapper {
+        @apply mb-6; /* Reducimos de mb-6 a mb-3 */
+    }
+
+    /* Reduce el espacio entre los links de navegación */
+    body.sidebar-colapsada nav {
+        @apply space-y-2; /* Reducimos de space-y-2 a space-y-1 */
+    }
+
+    /* Reduce el padding superior de la sección de logout */
+    body.sidebar-colapsada #logout-wrapper {
+        @apply pt-3; /* Reducimos de pt-6 a pt-3 */
+    }
+
+
+
+
+
+
 }
