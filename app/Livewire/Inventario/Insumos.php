@@ -103,13 +103,16 @@ class Insumos extends Component
                 $cantidad = $stock->cantidad_actual ?? 0;
                 $minimo = $stock->stock_minimo ?? 0;
 
-                if ($cantidad == 0) {
+                if ($cantidad < 0) {
+                    $insumo->alerta_stock = 'Negativo';
+                } elseif ($cantidad == 0) {
                     $insumo->alerta_stock = 'Sin stock';
                 } elseif ($cantidad < $minimo) {
                     $insumo->alerta_stock = 'Bajo stock';
                 } else {
                     $insumo->alerta_stock = 'Normal';
                 }
+
 
                 $insumo->stock_de_sucursal = $cantidad;
             }

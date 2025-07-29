@@ -46,6 +46,7 @@
             <option value="Normal">Normal</option>
             <option value="Bajo stock">Bajo stock</option>
             <option value="Sin stock">Sin stock</option>
+            <option value="Negativo">Negativo</option>
 
         </select>
 
@@ -117,6 +118,9 @@
                             @endswitch
                         @else
                             @switch($insumo->alerta_stock)
+                                @case('Negativo')
+                                    <span class="px-3 py-1 text-xs font-semibold bg-red-600 text-white rounded-full">Negativo</span>
+                                    @break
                                 @case('Sin stock')
                                     <span class="px-3 py-1 text-xs font-semibold bg-red-100 text-red-800 rounded-full">Sin stock</span>
                                     @break
@@ -126,6 +130,7 @@
                                 @default
                                     <span class="px-3 py-1 text-xs font-semibold bg-green-100 text-green-800 rounded-full">Normal</span>
                             @endswitch
+
                         @endif
                     </td>
 
@@ -187,13 +192,16 @@
                                                 <td class="px-2 py-1 whitespace-nowrap">{{ (int) $stock->cantidad_actual }}</td>
                                                 <td class="px-2 py-1 whitespace-nowrap">{{ (int) $stock->stock_minimo }}</td>
                                                 <td class="px-2 py-1 whitespace-nowrap">
-                                                    @if($stock->cantidad_actual == 0)
+                                                    @if($stock->cantidad_actual < 0)
+                                                        <span class="text-white bg-red-700 font-medium px-2 py-1 rounded-full text-xs">Negativo</span>
+                                                    @elseif($stock->cantidad_actual == 0)
                                                         <span class="text-red-600 font-medium">Sin stock</span>
                                                     @elseif($stock->cantidad_actual < $stock->stock_minimo)
                                                         <span class="text-yellow-600 font-medium">Bajo stock</span>
                                                     @else
                                                         <span class="text-green-600 font-medium">Normal</span>
                                                     @endif
+
                                                 </td>
                                             </tr>
                                         @endforeach
@@ -305,7 +313,7 @@
                                             <input type="number"
                                                    wire:model.defer="stockInicial.{{ $sucursal->id }}"
                                                    class="w-full px-2 py-1 border rounded-md text-sm"
-                                                   min="0" placeholder="0" />
+                                                   min="-999" placeholder="0" />
                                         </div>
                                         <div>
                                             <label class="block text-xs text-gray-500 mb-0.5">{{ $sucursal->nombre }} (Stock mínimo)</label>
