@@ -1,0 +1,17 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class FacturaPedido extends Model
+{
+    use HasFactory;
+
+    protected $fillable = ['pedido_id', 'rfc', 'razon_social', 'direccion', 'uso_cfdi', 'metodo_pago'];
+
+    public function pedido() {
+        return $this->belongsTo(Pedido::class);
+    }
+}
+
