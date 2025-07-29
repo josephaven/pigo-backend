@@ -214,6 +214,7 @@ class Traslados extends Component
 
         // Actualizar el estado final
         $traslado->estado = $nuevo_estado;
+        $traslado->estado_actualizado_por = auth()->id();
         $traslado->save();
 
         $this->dispatch('toast', mensaje: 'Estado actualizado correctamente.', tipo: 'success');
@@ -223,7 +224,8 @@ class Traslados extends Component
     public function verDetalles($traslado_id)
     {
         $this->trasladoSeleccionado = TrasladoInsumo::with([
-            'detalles.insumo', 'detalles.varianteInsumo', 'sucursalOrigen', 'sucursalDestino', 'user'
+            'detalles.insumo', 'detalles.varianteInsumo', 'sucursalOrigen', 'sucursalDestino', 'user',
+            'estadoActualizadoPor'
         ])->findOrFail($traslado_id);
 
         $this->modal_detalles_abierto = true;

@@ -19,6 +19,7 @@ class TrasladoInsumo extends Model
         'estado',
         'fecha_solicitud',
         'fecha_entrega',
+        'estado_actualizado_por',
     ];
 
     public function sucursalOrigen()
@@ -45,4 +46,10 @@ class TrasladoInsumo extends Model
     {
         return $this->hasMany(DetalleTraslado::class, 'traslado_insumo_id');
     }
+
+    public function estadoActualizadoPor()
+    {
+        return $this->belongsTo(User::class, 'estado_actualizado_por');
+    }
+
 }

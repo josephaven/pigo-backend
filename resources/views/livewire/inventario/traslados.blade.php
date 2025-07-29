@@ -209,7 +209,17 @@
                     <strong>Origen:</strong> {{ $trasladoSeleccionado->sucursalOrigen->nombre }} <br>
                     <strong>Destino:</strong> {{ $trasladoSeleccionado->sucursalDestino->nombre }} <br>
                     <strong>Responsable:</strong> {{ $trasladoSeleccionado->user->name }} <br>
-                    <strong>Estado:</strong> {{ ucfirst($trasladoSeleccionado->estado) }}
+                    <strong>Estado:</strong> {{ ucfirst($trasladoSeleccionado->estado) }} <br>
+                    @if($trasladoSeleccionado->estado !== 'pendiente' && $trasladoSeleccionado->estadoActualizadoPor)
+                        @if($trasladoSeleccionado->estado === 'recibido')
+                            <strong>Recibió:</strong> {{ $trasladoSeleccionado->estadoActualizadoPor->name }}
+                        @elseif($trasladoSeleccionado->estado === 'cancelado')
+                            <strong>Canceló:</strong> {{ $trasladoSeleccionado->estadoActualizadoPor->name }}
+                        @else
+                            <strong>Envió:</strong> {{ $trasladoSeleccionado->estadoActualizadoPor->name }}
+                        @endif
+                    @endif
+
                 </p>
 
                 <table class="w-full text-sm border-separate border-spacing-y-2 mt-4">
