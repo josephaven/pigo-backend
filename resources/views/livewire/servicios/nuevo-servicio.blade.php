@@ -133,23 +133,37 @@
 
         {{-- Agregar insumo --}}
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end" wire:key="formulario-insumo-{{ count($insumos_agregados) }}">
-        {{-- Selector de insumo --}}
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Insumo</label>
-                <select wire:model="insumo_id"
-                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
-                    <option selected hidden value="">Selecciona un insumo</option>
-                    @foreach ($insumos_disponibles as $insumo)
-                        @if (!in_array($insumo->id, array_column($insumos_agregados, 'id')))
-                            <option value="{{ $insumo->id }}">
-                                {{ $insumo->nombre }} ({{ $insumo->categoria->nombre ?? 'Sin categoría' }})
-                            </option>
+            {{-- Buscador tipo Google para insumo --}}
+            <div class="relative">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Buscar insumo</label>
+                <input type="text"
+                       wire:model="busqueda_insumo"
+                       wire:keyup="actualizarSugerenciasInsumo"
+                       placeholder="Nombre del insumo..."
+                       autocomplete="off"
+                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+
+
+                {{-- Forzar render --}}
+                <span class="hidden">{{ $forzar_render_insumo }}</span>
+
+                {{-- Sugerencias --}}
+                <ul class="absolute z-50 bg-white border rounded shadow w-full mt-1 max-h-48 overflow-auto
+        {{ $mostrar_sugerencias_insumo && $insumos_sugeridos ? '' : 'hidden' }}">
+                    @foreach ($insumos_sugeridos as $i)
+                        @if (!in_array($i->id, array_column($insumos_agregados, 'id')))
+                            <li wire:click="seleccionarInsumo({{ $i->id }})"
+                                class="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm">
+                                {{ $i->nombre }} ({{ $i->categoria->nombre ?? 'Sin categoría' }})
+                            </li>
                         @endif
                     @endforeach
-                </select>
+                </ul>
 
                 @error('insumo_id') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
             </div>
+
+
 
             {{-- Cantidad --}}
             <div>

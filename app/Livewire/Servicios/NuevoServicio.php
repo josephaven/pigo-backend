@@ -38,6 +38,13 @@ class NuevoServicio extends Component
     public $campo_opciones = ''; // texto separado por comas si es tipo select
 
 
+    public $busqueda_insumo = '';
+    public $insumos_sugeridos = [];
+    public $mostrar_sugerencias_insumo = false;
+    public $forzar_render_insumo = 0;
+    public $insumo_seleccionado = null;
+
+
 
 
 
@@ -345,6 +352,58 @@ class NuevoServicio extends Component
     {
         unset($this->campos_personalizados[$index]);
         $this->campos_personalizados = array_values($this->campos_personalizados);
+    }
+
+
+    public function updated($prop)
+    {
+        if ($prop === 'busqueda_insumo') {
+            $this->forzar_render_insumo++;
+
+            if (strlen($this->busqueda_insumo) < 2) {
+                $this->insumos_sugeridos = [];
+                $this->mostrar_sugerencias_insumo = false;
+                return;
+            }
+
+            $this->insumos_sugeridos = Insumo::where(function ($query) {
+                $query->where('nombre', 'ILIKE', '%' . $this->busqueda_insumo . '%');
+            })
+                ->limit(5)
+                ->get();
+
+            $this->mostrar_sugerencias_insumo = true;
+        }
+    }
+
+
+    public function seleccionarInsumo($id)
+    {
+        $insumo = Insumo::with('categoria')->find($id);
+
+        if ($insumo) {
+            $this->insumo_id = $insumo->id;
+            $this->busqueda_insumo = $insumo->nombre;
+            $this->mostrar_sugerencias_insumo = false;
+            $this->insumo_seleccionado = $insumo;
+        }
+    }
+
+    public function actualizarSugerenciasInsumo()
+    {
+        if (strlen($this->busqueda_insumo) < 2) {
+            $this->insumos_sugeridos = [];
+            $this->mostrar_sugerencias_insumo = false;
+            return;
+        }
+
+        $this->insumos_sugeridos = Insumo::with('categoria')
+            ->where('nombre', 'ILIKE', '%' . $this->busqueda_insumo . '%')
+            ->limit(5)
+            ->get();
+
+        $this->mostrar_sugerencias_insumo = true;
+        $this->forzar_render_insumo++;
     }
 
 
