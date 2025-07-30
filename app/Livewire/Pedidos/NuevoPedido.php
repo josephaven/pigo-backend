@@ -5,9 +5,12 @@ namespace App\Livewire\Pedidos;
 use App\Models\Pedido;
 use App\Models\Cliente;
 use App\Models\Sucursal;
+use App\Models\MetodoPago;
+use App\Models\FacturaPedido;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+
 
 class NuevoPedido extends Component
 {
@@ -36,13 +39,25 @@ class NuevoPedido extends Component
     public $clientes_sugeridos = [];
     public $mostrar_sugerencias = false;
     public $forzar_render = 0;
-
     public $cliente_seleccionado;
+
+    // Método de pago (para el pedido)
+    public $metodo_pago_id;
+
+    // Requiere factura
+    public $requiere_factura = false;
+
+    // Datos fiscales
+    public $rfc, $razon_social, $direccion_fiscal, $uso_cfdi, $metodo_pago_factura;
+
+    public $metodos_pago = [];
+
 
     public function mount($id = null)
     {
         $this->sucursal_registro_id = Auth::user()->sucursal_id;
         $this->fecha_entrega = now()->addDays(2)->format('Y-m-d');
+        $this->metodos_pago = MetodoPago::all();
 
         if ($id) {
             $this->modo_edicion = true;
@@ -87,6 +102,21 @@ class NuevoPedido extends Component
             $this->busqueda_cliente = $cliente->nombre_completo;
             $this->mostrar_sugerencias = false;
             $this->cliente_seleccionado = $cliente;
+
+            // Cargar última factura previa
+            $ultimaFactura = FacturaPedido::whereHas('pedido', function ($q) use ($cliente) {
+                $q->where('cliente_id', $cliente->id);
+            })->latest()->first();
+
+            if ($ultimaFactura) {
+                $this->razon_social = $ultimaFactura->razon_social;
+                $this->rfc = $ultimaFactura->rfc;
+                $this->direccion_fiscal = $ultimaFactura->direccion;
+                $this->uso_cfdi = $ultimaFactura->uso_cfdi;
+                $this->metodo_pago_factura = $ultimaFactura->metodo_pago;
+            } else {
+                $this->razon_social = $this->rfc = $this->direccion_fiscal = $this->uso_cfdi = $this->metodo_pago_factura = '';
+            }
         }
     }
 
@@ -131,7 +161,24 @@ class NuevoPedido extends Component
         $this->anticipo = $pedido->anticipo;
         $this->total = $pedido->total;
         $this->justificacion_precio = $pedido->justificacion_precio;
+        $this->metodo_pago_id = $pedido->metodo_pago_id;
+
+        // Precargar datos fiscales si el pedido tiene factura
+        $factura = FacturaPedido::where('pedido_id', $pedido->id)->first();
+        if ($factura) {
+            $this->requiere_factura = true;
+            $this->rfc = $factura->rfc;
+            $this->razon_social = $factura->razon_social;
+            $this->direccion_fiscal = $factura->direccion;
+            $this->uso_cfdi = $factura->uso_cfdi;
+            $this->metodo_pago_factura = $factura->metodo_pago;
+        } else {
+            // Limpia los campos en caso de no tener factura
+            $this->requiere_factura = false;
+            $this->rfc = $this->razon_social = $this->direccion_fiscal = $this->uso_cfdi = $this->metodo_pago_factura = '';
+        }
     }
+
 
     public function guardar()
     {
@@ -167,7 +214,18 @@ class NuevoPedido extends Component
             'fecha_entrega' => ['required', 'date', 'after_or_equal:today'],
             'anticipo' => ['required', 'numeric', 'min:0'],
             'total' => ['required', 'numeric', 'min:0'],
+            'metodo_pago_id' => ['required', Rule::exists('metodos_pago', 'id')],
         ]);
+
+        if ($this->requiere_factura) {
+            $this->validate([
+                'rfc' => 'required|string|max:13',
+                'razon_social' => 'required|string|max:255',
+                'direccion_fiscal' => 'required|string|max:255',
+                'uso_cfdi' => 'nullable|string|max:50',
+                'metodo_pago_factura' => 'nullable|string|max:100',
+            ]);
+        }
 
         $data = [
             'cliente_id' => $this->cliente_id,
@@ -178,6 +236,7 @@ class NuevoPedido extends Component
             'anticipo' => $this->anticipo,
             'total' => $this->total,
             'justificacion_precio' => $this->justificacion_precio,
+            'metodo_pago_id' => $this->metodo_pago_id,
             'user_id' => Auth::id(),
         ];
 
@@ -187,6 +246,19 @@ class NuevoPedido extends Component
         } else {
             $pedido = Pedido::create($data);
             $this->pedido_id = $pedido->id;
+
+            // Crear factura si aplica
+            if ($this->requiere_factura) {
+                FacturaPedido::create([
+                    'pedido_id' => $pedido->id,
+                    'rfc' => $this->rfc,
+                    'razon_social' => $this->razon_social,
+                    'direccion' => $this->direccion_fiscal,
+                    'uso_cfdi' => $this->uso_cfdi,
+                    'metodo_pago' => $this->metodo_pago_factura,
+                ]);
+            }
+
             session()->flash('mensaje', 'Pedido creado correctamente');
         }
 

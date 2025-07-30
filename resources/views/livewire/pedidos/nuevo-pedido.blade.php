@@ -134,7 +134,7 @@
     {{-- Sección: Datos generales --}}
     <div class="bg-white rounded-lg shadow p-6 space-y-6 border border-gray-200">
 
-        <h2 class="text-lg font-semibold text-gray-800">Datos generales</h2>
+        <h2 class="text-lg font-semibold text-gray-800">Detalles</h2>
 
             {{-- Fecha de entrega --}}
         <div>
@@ -179,36 +179,81 @@
             </div>
         </div>
 
-        {{-- Montos --}}
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-sm text-gray-700 mb-1">Total</label>
-                <input type="number" step="0.01" wire:model.defer="total"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
-                @error('total') <span class="text-red-600 text-xs">{{ $message }}</span> @enderror
-            </div>
 
-            <div>
-                <label class="block text-sm text-gray-700 mb-1">Anticipo</label>
-                <input type="number" step="0.01" wire:model.defer="anticipo"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
-                @error('anticipo') <span class="text-red-600 text-xs">{{ $message }}</span> @enderror
-            </div>
-
-            <div>
-                <label class="block text-sm text-gray-700 mb-1">Justificación de precio</label>
-                <input type="text" wire:model.defer="justificacion_precio"
-                       placeholder="Ej. descuento por volumen"
-                       class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
-                @error('justificacion_precio') <span class="text-red-600 text-xs">{{ $message }}</span> @enderror
-            </div>
+        {{-- Método de pago --}}
+        <div>
+            <label class="block text-sm text-gray-700 mb-1">Método de pago</label>
+            <select wire:model.defer="metodo_pago_id"
+                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                <option value="">Selecciona uno</option>
+                @foreach ($metodos_pago as $metodo)
+                    <option value="{{ $metodo->id }}">{{ $metodo->nombre }}</option>
+                @endforeach
+            </select>
+            @error('metodo_pago_id') <span class="text-red-600 text-xs">{{ $message }}</span> @enderror
         </div>
+
+        {{-- Facturación --}}
+        <div class="space-y-4 mt-6">
+
+            {{-- Checkbox: Requiere factura --}}
+            <label class="flex items-center gap-2 text-sm text-gray-700">
+                <input type="checkbox" wire:click="$set('requiere_factura', !@js($requiere_factura))" class="rounded border-gray-300">
+                ¿Requiere factura?
+            </label>
+
+
+            {{-- Formulario fiscal si se activa --}}
+            @if($requiere_factura)
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-1">Razón social</label>
+                        <input type="text" wire:model.defer="razon_social"
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        @error('razon_social') <span class="text-red-600 text-xs">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-1">RFC</label>
+                        <input type="text" wire:model.defer="rfc"
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm uppercase">
+                        @error('rfc') <span class="text-red-600 text-xs">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="block text-sm text-gray-700 mb-1">Dirección fiscal</label>
+                        <input type="text" wire:model.defer="direccion_fiscal"
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        @error('direccion_fiscal') <span class="text-red-600 text-xs">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-1">Uso de CFDI</label>
+                        <input type="text" wire:model.defer="uso_cfdi"
+                               placeholder="Ej. G03"
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        @error('uso_cfdi') <span class="text-red-600 text-xs">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-1">Método de pago (factura)</label>
+                        <input type="text" wire:model.defer="metodo_pago_factura"
+                               placeholder="Ej. PUE, PPD"
+                               class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        @error('metodo_pago_factura') <span class="text-red-600 text-xs">{{ $message }}</span> @enderror
+                    </div>
+
+                </div>
+            @endif
+        </div>
+
     </div>
 
     {{-- Botones --}}
     <div class="flex justify-end gap-3">
         <a href="{{ route('pedidos') }}"
-           class="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 text-sm">
+           class="px-4 py-2 rounded-md border bg-white text-gray-700 hover:bg-gray-100 text-sm">
             Cancelar
         </a>
         <button wire:click="guardar"
