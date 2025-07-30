@@ -20,6 +20,14 @@
 
     {{-- Ocultar elementos con x-cloak hasta que Alpine.js esté listo --}}
     <style>[x-cloak] { display: none !important; }</style>
+
+    {{-- Ocultar scrollbar horizontal de tabs para que se vea más limpio en móvil --}}
+    <style>
+        nav::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+
 </head>
 <body class="font-[Poppins] antialiased bg-gray-100">
     <script>
@@ -70,7 +78,7 @@
 </div>
 
 @stack('modals')
-@livewireScripts
+
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         const toggleMobile = document.getElementById('btn-sidebar-toggle');
