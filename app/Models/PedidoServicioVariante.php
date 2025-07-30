@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class PedidoServicioVariante extends Model
 {
@@ -17,6 +18,9 @@ class PedidoServicioVariante extends Model
     protected $casts = [
         'atributos' => 'array',
     ];
+
+    protected $table = 'pedido_servicio_variante';
+
 
     public function pedido() {
         return $this->belongsTo(Pedido::class);
