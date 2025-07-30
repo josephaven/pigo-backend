@@ -10,6 +10,9 @@ use App\Livewire\Inventario\Categorias;
 use App\Livewire\Inventario\Insumos;
 use App\Livewire\Inventario\Mermas;
 use App\Livewire\Inventario\Traslados;
+use App\Livewire\Pedidos\NuevoPedido;
+use App\Livewire\Pedidos\Pedidos;
+use App\Livewire\Pedidos\PedidosParaElaboracion;
 use App\Livewire\Servicios\Servicios;
 use Illuminate\Support\Facades\Route;
 use App\Livewire\Servicios\NuevoServicio;
@@ -51,5 +54,12 @@ Route::middleware([
     Route::get('/servicios', Servicios::class)->name('servicios');
     Route::get('/servicios/nuevo', NuevoServicio::class)->name('servicios.nuevo');
     Route::get('/servicios/editar/{servicio}', NuevoServicio::class)->name('servicios.editar');
+
+    // Módulo Pedidos
+    Route::get('/pedidos', Pedidos::class)->name('pedidos');
+    Route::get('/pedidos/para-elaboracion', PedidosParaElaboracion::class)->name('pedidos.para-elaboracion');
+    Route::get('/pedidos/nuevo', NuevoPedido::class)->name('pedidos.nuevo');
+
+
     // Aquí puedes agregar otras rutas por módulo en el futuro...
 });
