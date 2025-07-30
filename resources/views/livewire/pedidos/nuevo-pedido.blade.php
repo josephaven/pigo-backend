@@ -250,6 +250,185 @@
 
     </div>
 
+    {{-- Sección: Servicios del pedido --}}
+    <div class="bg-white rounded-lg shadow p-6 space-y-6 border border-gray-200">
+        <h2 class="text-lg font-semibold text-gray-800">Servicios del pedido</h2>
+
+        {{-- Selección de servicio --}}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm text-gray-700 mb-1">Seleccionar servicio</label>
+                <select wire:model="servicio_seleccionado_id" wire:change="cargarServicioSeleccionado"
+                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    <option value="">Selecciona uno</option>
+                    @foreach ($servicios_catalogo as $servicio)
+                        <option value="{{ $servicio->id }}">{{ $servicio->nombre }}</option>
+                    @endforeach
+                </select>
+                @error('servicio_seleccionado_id') <span class="text-red-600 text-xs">{{ $message }}</span> @enderror
+            </div>
+        </div>
+
+        {{-- Campos personalizados dinámicos --}}
+        @if(!empty($campos_personalizados))
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                @foreach ($campos_personalizados as $index => $campo)
+                    <div>
+                        <label class="block text-sm text-gray-700 mb-1">{{ $campo['nombre'] }}</label>
+
+                        @if ($campo['tipo'] === 'texto')
+                            <input type="text" wire:model.defer="campos_personalizados.{{ $index }}.valor"
+                                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        @elseif ($campo['tipo'] === 'número')
+                            <input type="number" wire:model.defer="campos_personalizados.{{ $index }}.valor"
+                                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                        @elseif ($campo['tipo'] === 'booleano')
+                            <select wire:model.defer="campos_personalizados.{{ $index }}.valor"
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                <option value="">Selecciona</option>
+                                <option value="1">Sí</option>
+                                <option value="0">No</option>
+                            </select>
+                        @elseif ($campo['tipo'] === 'select')
+                            <select wire:model.defer="campos_personalizados.{{ $index }}.valor"
+                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                                <option value="">Selecciona una opción</option>
+                                @foreach ($campo['opciones'] as $opcion)
+                                    <option value="{{ $opcion }}">{{ $opcion }}</option>
+                                @endforeach
+                            </select>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
+        {{-- Insumos con variantes --}}
+        @if (!empty($insumos_con_variantes))
+            <div class="mt-6 space-y-4">
+                <h3 class="text-sm font-medium text-gray-700">Selecciona variantes de insumos</h3>
+
+                @foreach ($insumos_con_variantes as $i => $insumo)
+                    <div class="border rounded p-4 bg-gray-50">
+                        <p class="font-semibold text-sm mb-2 text-gray-800">{{ $insumo['nombre'] }}</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                            @foreach ($insumo['variantes'] as $variante)
+                                <label class="flex items-start space-x-2 text-sm text-gray-600">
+                                    <input type="checkbox"
+                                           wire:model.defer="insumos_con_variantes.{{ $i }}.variantes_seleccionadas"
+                                           value="{{ $variante['id'] }}"
+                                           class="mt-1 border-gray-300 rounded text-blue-600 focus:ring-blue-500">
+                                    <span>
+                                {{ collect($variante['atributos'])->map(fn($v, $k) => "$k: $v")->implode(', ') }}
+                            </span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+
+
+
+        {{-- Botón para agregar servicio --}}
+        <div class="flex justify-end">
+            <button wire:click="agregarServicio"
+                    class="px-4 py-2 rounded-md bg-blue-600 text-white text-sm hover:bg-blue-700">
+                + Agregar servicio
+            </button>
+        </div>
+
+        {{-- Tabla de servicios agregados --}}
+        @if (!empty($servicios_pedido))
+            <div class="mt-6 overflow-auto">
+                <table class="w-full text-sm text-left border border-gray-300 rounded">
+                    <thead class="bg-gray-100 text-gray-800">
+                    <tr>
+                        <th class="px-4 py-2">Servicio</th>
+                        <th class="px-4 py-2">Cantidad</th>
+                        <th class="px-4 py-2">Precio unitario</th>
+                        <th class="px-4 py-2">Subtotal</th>
+                        <th class="px-4 py-2">Campos personalizados</th>
+                        <th class="px-4 py-2">Insumos usados</th>
+                        <th class="px-4 py-2">Acciones</th>
+                    </tr>
+                    </thead>
+
+                    <tbody class="bg-white">
+                    @foreach ($servicios_pedido as $i => $s)
+                        <tr class="border-t border-gray-200 align-top">
+
+                            {{-- Servicio --}}
+                            <td class="px-4 py-2 font-medium">
+                                {{ $s['nombre'] }}
+                            </td>
+
+                            {{-- Cantidad --}}
+                            <td class="px-4 py-2">
+                                <input type="number" min="1" wire:model.lazy="servicios_pedido.{{ $i }}.cantidad"
+                                       class="w-20 border border-gray-300 rounded px-2 py-1 text-sm" />
+                            </td>
+
+                            {{-- Precio unitario --}}
+                            <td class="px-4 py-2 text-sm">
+                                ${{ number_format($s['precio_unitario'], 2) }}
+                            </td>
+
+                            {{-- Subtotal --}}
+                            <td class="px-4 py-2 text-sm font-medium text-gray-800">
+                                ${{ number_format(($s['cantidad'] ?? 1) * $s['precio_unitario'], 2) }}
+                            </td>
+
+                            {{-- Campos personalizados --}}
+                            <td class="px-4 py-2 text-xs text-gray-700 space-y-1">
+                                @foreach ($s['campos_personalizados'] as $campo)
+                                    @if (!empty($campo['valor']))
+                                        <div>
+                                            <strong>{{ $campo['nombre'] }}:</strong>
+                                            @if ($campo['tipo'] === 'booleano')
+                                                {{ $campo['valor'] ? 'Sí' : 'No' }}
+                                            @else
+                                                {{ $campo['valor'] }}
+                                            @endif
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </td>
+
+                            {{-- Insumos usados --}}
+                            <td class="px-4 py-2 text-xs text-blue-700 space-y-1">
+                                @if (!empty($s['insumos_usados']))
+                                    @foreach ($s['insumos_usados'] as $insumo)
+                                        <div class="text-xs text-blue-700 underline">
+                                            - {{ $insumo['nombre'] }}
+                                            @if (!empty($insumo['atributos']) && is_array($insumo['atributos']))
+                                                ({{ collect($insumo['atributos'])->map(fn($v, $k) => "$k: $v")->implode(', ') }})
+                                            @endif
+                                        </div>
+                                    @endforeach
+
+
+                                @endif
+                            </td>
+
+                            {{-- Acciones --}}
+                            <td class="px-4 py-2">
+                                <button wire:click="eliminarServicio({{ $i }})"
+                                        class="text-red-600 hover:underline text-sm">Eliminar</button>
+                            </td>
+
+                        </tr>
+                    @endforeach
+                    </tbody>
+
+
+                </table>
+            </div>
+        @endif
+    </div>
+
+
     {{-- Botones --}}
     <div class="flex justify-end gap-3">
         <a href="{{ route('pedidos') }}"

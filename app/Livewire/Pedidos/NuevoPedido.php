@@ -7,6 +7,10 @@ use App\Models\Cliente;
 use App\Models\Sucursal;
 use App\Models\MetodoPago;
 use App\Models\FacturaPedido;
+use App\Models\Servicio;
+use App\Models\CampoPersonalizado;
+use App\Models\Insumo;
+use App\Models\VarianteInsumo;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
@@ -52,11 +56,20 @@ class NuevoPedido extends Component
 
     public $metodos_pago = [];
 
+    public $servicios_catalogo = [];
+    public $servicios_pedido = [];
+
+// Auxiliares para cargar dinámicamente
+    public $servicio_seleccionado_id;
+    public $campos_personalizados = [];
+    public $insumos_con_variantes = [];
+
 
     public function mount($id = null)
     {
         $this->sucursal_registro_id = Auth::user()->sucursal_id;
         $this->fecha_entrega = now()->addDays(2)->format('Y-m-d');
+        $this->servicios_catalogo = Servicio::where('activo', true)->get();
         $this->metodos_pago = MetodoPago::all();
 
         if ($id) {
@@ -264,4 +277,97 @@ class NuevoPedido extends Component
 
         return redirect()->route('pedidos');
     }
+
+    public function cargarServicioSeleccionado()
+    {
+        if (!$this->servicio_seleccionado_id) return;
+
+        $servicio = Servicio::with(['camposPersonalizados', 'insumos.variantes'])->find($this->servicio_seleccionado_id);
+
+        if (!$servicio) return;
+
+        $campos = $servicio->camposPersonalizados->map(function ($campo) {
+            return [
+                'id' => $campo->id,
+                'nombre' => $campo->nombre,
+                'tipo' => $campo->tipo,
+                'valor' => null,
+                'opciones' => $campo->opciones ?? [],
+            ];
+        });
+
+        $insumos = $servicio->insumos->map(function ($insumo) {
+            return [
+                'id' => $insumo->id,
+                'nombre' => $insumo->nombre,
+                'variantes' => $insumo->variantes->map(function ($v) {
+                    return [
+                        'id' => $v->id,
+                        'atributos' => is_string($v->atributos) ? json_decode($v->atributos, true) : $v->atributos,
+
+                    ];
+                }),
+                'variantes_seleccionadas' => []
+            ];
+        });
+
+        $this->campos_personalizados = $campos->toArray();
+        $this->insumos_con_variantes = $insumos->toArray();
+    }
+
+    public function agregarServicio()
+    {
+        $this->validate([
+            'servicio_seleccionado_id' => 'required|exists:servicios,id',
+            'campos_personalizados.*.valor' => 'nullable|string|max:255',
+        ]);
+
+        $servicio = Servicio::find($this->servicio_seleccionado_id);
+
+        $insumos_usados = [];
+
+        foreach ($this->insumos_con_variantes as $insumo) {
+            if (!empty($insumo['variantes_seleccionadas']) && is_array($insumo['variantes_seleccionadas'])) {
+                foreach ($insumo['variantes_seleccionadas'] as $variante_id) {
+                    $variante = VarianteInsumo::find($variante_id);
+                    if ($variante) {
+                        $insumos_usados[] = [
+                            'insumo_id' => $insumo['id'],
+                            'nombre' => $insumo['nombre'],
+                            'variante_id' => $variante->id,
+                            'atributos' => is_string($variante->atributos)
+                                ? json_decode($variante->atributos, true)
+                                : $variante->atributos,
+                        ];
+                    }
+                }
+            }
+        }
+
+
+        $this->servicios_pedido[] = [
+            'servicio_id' => $servicio->id,
+            'nombre' => $servicio->nombre,
+            'campos_personalizados' => $this->campos_personalizados,
+            'insumos_usados' => $insumos_usados,
+            'cantidad' => 1,
+            'precio_unitario' => $this->tipo_cliente === 'Maquilador' ? $servicio->precio_maquilador : $servicio->precio_normal,
+            'subtotal' => ($this->tipo_cliente === 'Maquilador' ? $servicio->precio_maquilador : $servicio->precio_normal),
+        ];
+
+        $this->servicio_seleccionado_id = null;
+        $this->campos_personalizados = [];
+        $this->insumos_con_variantes = [];
+    }
+
+
+    public function eliminarServicio($index)
+    {
+        unset($this->servicios_pedido[$index]);
+        $this->servicios_pedido = array_values($this->servicios_pedido); // reindexar
+    }
+
+
+
+
 }
