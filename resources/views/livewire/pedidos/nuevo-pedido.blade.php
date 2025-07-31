@@ -279,7 +279,7 @@
                         @if ($campo['tipo'] === 'texto')
                             <input type="text" wire:model.defer="campos_personalizados.{{ $index }}.valor"
                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
-                        @elseif ($campo['tipo'] === 'número')
+                        @elseif ($campo['tipo'] === 'numero')
                             <input type="number" wire:model.defer="campos_personalizados.{{ $index }}.valor"
                                    class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
                         @elseif ($campo['tipo'] === 'booleano')
@@ -349,6 +349,7 @@
                         <th class="px-4 py-2">Cantidad</th>
                         <th class="px-4 py-2">Precio unitario</th>
                         <th class="px-4 py-2">Subtotal</th>
+                        <th class="px-4 py-2">Total final</th>
                         <th class="px-4 py-2">Campos personalizados</th>
                         <th class="px-4 py-2">Insumos usados</th>
                         <th class="px-4 py-2">Acciones</th>
@@ -379,6 +380,24 @@
                             <td class="px-4 py-2 text-sm font-medium text-gray-800">
                                 ${{ number_format(($s['cantidad'] ?? 1) * $s['precio_unitario'], 2) }}
                             </td>
+
+                            {{-- Total final --}}
+                            <td class="px-4 py-2 text-sm text-gray-800 space-y-1">
+                                @if (!empty($s['total_final']))
+                                    <div>
+                                        <strong>${{ number_format($s['total_final'], 2) }}</strong>
+                                    </div>
+                                    @if (!empty($s['justificacion_total']))
+                                        <div class="text-[11px] italic text-gray-500">
+                                            Justificación: {{ $s['justificacion_total'] }}
+                                        </div>
+                                    @endif
+                                @else
+                                    <span class="text-gray-400 text-xs italic">—</span>
+                                @endif
+                            </td>
+
+
 
                             {{-- Campos personalizados --}}
                             <td class="px-4 py-2 text-xs text-gray-700 space-y-1">
@@ -413,10 +432,14 @@
                             </td>
 
                             {{-- Acciones --}}
-                            <td class="px-4 py-2">
+                            <td class="px-4 py-2 space-y-1">
+                                <button wire:click="editarServicio({{ $i }})"
+                                        class="text-blue-600 hover:underline text-sm block">Editar</button>
+
                                 <button wire:click="eliminarServicio({{ $i }})"
-                                        class="text-red-600 hover:underline text-sm">Eliminar</button>
+                                        class="text-red-600 hover:underline text-sm block">Eliminar</button>
                             </td>
+
 
                         </tr>
                     @endforeach
@@ -440,5 +463,132 @@
             Guardar pedido
         </button>
     </div>
+
+    {{-- Modal de edición de servicio --}}
+    @if ($modal_servicio_abierto)
+        <div class="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center">
+            <div class="bg-white w-full max-w-3xl mx-4 rounded-lg shadow-lg p-6 relative z-50 overflow-y-auto max-h-[90vh]">
+
+                {{-- Encabezado --}}
+                <h2 class="text-lg font-semibold mb-4 text-gray-800">
+                    Editar servicio: {{ $servicios_catalogo->find($servicio_seleccionado_id)->nombre ?? '' }}
+                </h2>
+
+                {{-- Cantidad --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Cantidad</label>
+                    <input type="number" min="1" wire:model.lazy="servicios_pedido.{{ $indice_edicion_servicio }}.cantidad"
+                           class="w-full mt-1 border-gray-300 rounded-md shadow-sm">
+                </div>
+
+                {{-- Precio unitario --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Precio unitario</label>
+                    <input type="number" min="0" step="0.01" wire:model.lazy="servicios_pedido.{{ $indice_edicion_servicio }}.precio_unitario"
+                           class="w-full mt-1 border-gray-300 rounded-md shadow-sm">
+                </div>
+
+                {{-- Total final y justificación --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Total final (opcional)</label>
+                    <input type="number" step="0.01" wire:model.lazy="servicios_pedido.{{ $indice_edicion_servicio }}.total_final"
+                           class="w-full mt-1 border-gray-300 rounded-md shadow-sm">
+                </div>
+
+                @if (!empty($servicios_pedido[$indice_edicion_servicio]['total_final']))
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Justificación del total</label>
+                        <textarea wire:model.lazy="servicios_pedido.{{ $indice_edicion_servicio }}.justificacion_total"
+                                  class="w-full mt-1 border-gray-300 rounded-md shadow-sm"></textarea>
+                    </div>
+                @endif
+
+                {{-- Archivo de diseño --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Archivo de diseño (opcional)</label>
+
+                    @if ($archivo_diseno)
+                        <div class="flex items-center gap-2 mt-2">
+                        <span class="text-sm text-green-700">
+                            Archivo seleccionado: <strong>{{ $archivo_diseno->getClientOriginalName() }}</strong>
+                        </span>
+                            <button type="button" wire:click="eliminarArchivo"
+                                    class="text-red-600 text-xs hover:underline">Eliminar</button>
+                        </div>
+                    @elseif ($archivo_diseno_nombre)
+                        <div class="flex items-center gap-2 mt-2">
+                        <span class="text-sm text-green-700">
+                            Archivo previamente guardado: <strong>{{ $archivo_diseno_nombre }}</strong>
+                        </span>
+                            <button type="button" wire:click="eliminarArchivo"
+                                    class="text-red-600 text-xs hover:underline">Eliminar</button>
+                        </div>
+                    @endif
+
+                    <input type="file" wire:model="archivo_diseno"
+                           class="mt-2 block w-full text-sm text-gray-900 border border-gray-300 rounded cursor-pointer bg-white" />
+
+                    @error('archivo_diseno')
+                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
+                {{-- Campos personalizados --}}
+                <div class="mb-4">
+                    <h3 class="font-semibold text-gray-800 mb-2">Campos personalizados</h3>
+                    @foreach ($campos_personalizados as $index => $campo)
+                        <div class="mb-2">
+                            <label class="block text-sm text-gray-700 font-medium">{{ $campo['nombre'] }}</label>
+                            @switch($campo['tipo'])
+                                @case('texto')
+                                    <input type="text" wire:model.lazy="campos_personalizados.{{ $index }}.valor"
+                                           class="w-full border-gray-300 rounded-md shadow-sm" />
+                                    @break
+
+                                @case('numero')
+                                    <input type="number" wire:model.lazy="campos_personalizados.{{ $index }}.valor"
+                                           class="w-full border-gray-300 rounded-md shadow-sm" />
+                                    @break
+
+                                @case('booleano')
+                                    <select wire:model.lazy="campos_personalizados.{{ $index }}.valor"
+                                            class="w-full border-gray-300 rounded-md shadow-sm">
+                                        <option value="">Selecciona</option>
+                                        <option value="1">Sí</option>
+                                        <option value="0">No</option>
+                                    </select>
+                                    @break
+
+                                @case('select')
+                                    <select wire:model.lazy="campos_personalizados.{{ $index }}.valor"
+                                            class="w-full border-gray-300 rounded-md shadow-sm">
+                                        <option value="">Selecciona</option>
+                                        @foreach ($campo['opciones'] as $op)
+                                            <option value="{{ $op }}">{{ $op }}</option>
+                                        @endforeach
+                                    </select>
+                                    @break
+                            @endswitch
+                        </div>
+                    @endforeach
+                </div>
+
+                {{-- Botones --}}
+                <div class="flex justify-end gap-4 mt-6">
+                    <button wire:click="resetServicio"
+                            class="px-4 py-2 bg-gray-300 hover:bg-gray-400 rounded text-sm text-gray-800">
+                        Cancelar
+                    </button>
+                    <button wire:click="guardarEdicionServicio"
+                            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm text-white">
+                        Guardar cambios
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    @endif
+
+
 
 </div>

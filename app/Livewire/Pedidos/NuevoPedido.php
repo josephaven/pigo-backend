@@ -14,10 +14,12 @@ use App\Models\VarianteInsumo;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use Livewire\WithFileUploads;
 
 
 class NuevoPedido extends Component
 {
+    use WithFileUploads;
     public $pedido_id;
     public $cliente_id;
     public $sucursal_registro_id;
@@ -64,6 +66,15 @@ class NuevoPedido extends Component
     public $campos_personalizados = [];
     public $insumos_con_variantes = [];
 
+    public $modal_servicio_abierto = false;
+    public $indice_edicion_servicio = null;
+    public $archivo_diseno; // para archivo de diseño (Livewire upload futuro)
+    public $archivo_diseno_nombre;
+
+
+
+
+
 
     public function mount($id = null)
     {
@@ -80,6 +91,7 @@ class NuevoPedido extends Component
 
     public function render()
     {
+        $this->recalcularTotal();
         return view('livewire.pedidos.nuevo-pedido', [
             'sucursales' => Sucursal::all(),
         ])->layout('layouts.app');
@@ -319,8 +331,38 @@ class NuevoPedido extends Component
     {
         $this->validate([
             'servicio_seleccionado_id' => 'required|exists:servicios,id',
-            'campos_personalizados.*.valor' => 'nullable|string|max:255',
         ]);
+
+        foreach ($this->campos_personalizados as $i => $campo) {
+            $tipo = $campo['tipo'] ?? 'texto';
+            $base = "campos_personalizados.$i.valor";
+
+            switch ($tipo) {
+                case 'texto':
+                case 'select':
+                    $this->validate([
+                        $base => 'nullable|string|max:255',
+                    ]);
+                    break;
+
+                case 'numero':
+                    $this->validate([
+                        $base => 'nullable|numeric|min:0',
+                    ]);
+                    break;
+
+                case 'booleano':
+                    $this->validate([
+                        $base => 'nullable|boolean',
+                    ]);
+                    break;
+
+                default:
+                    // Tipo desconocido, se ignora o se puede lanzar error si quieres
+                    break;
+            }
+        }
+
 
         $servicio = Servicio::find($this->servicio_seleccionado_id);
 
@@ -344,8 +386,7 @@ class NuevoPedido extends Component
             }
         }
 
-
-        $this->servicios_pedido[] = [
+        $nuevo_servicio = [
             'servicio_id' => $servicio->id,
             'nombre' => $servicio->nombre,
             'campos_personalizados' => $this->campos_personalizados,
@@ -353,18 +394,148 @@ class NuevoPedido extends Component
             'cantidad' => 1,
             'precio_unitario' => $this->tipo_cliente === 'Maquilador' ? $servicio->precio_maquilador : $servicio->precio_normal,
             'subtotal' => ($this->tipo_cliente === 'Maquilador' ? $servicio->precio_maquilador : $servicio->precio_normal),
+            'total_final' => null,
+            'justificacion_total' => null,
+            'archivo_diseno' => null,
         ];
 
-        $this->servicio_seleccionado_id = null;
-        $this->campos_personalizados = [];
-        $this->insumos_con_variantes = [];
+        if ($this->indice_edicion_servicio !== null) {
+            $this->servicios_pedido[$this->indice_edicion_servicio] = $nuevo_servicio;
+        } else {
+            $this->servicios_pedido[] = $nuevo_servicio;
+        }
+
+        // Reset de propiedades
+        $this->resetServicio();
     }
+
 
 
     public function eliminarServicio($index)
     {
         unset($this->servicios_pedido[$index]);
         $this->servicios_pedido = array_values($this->servicios_pedido); // reindexar
+    }
+
+
+    public function editarServicio($index)
+    {
+        $servicio = $this->servicios_pedido[$index] ?? null;
+
+        if (!$servicio) return;
+
+        $this->indice_edicion_servicio = $index;
+        $this->servicio_seleccionado_id = $servicio['servicio_id'];
+        $this->campos_personalizados = $servicio['campos_personalizados'] ?? [];
+        $this->insumos_con_variantes = [];
+
+        $servicio_base = Servicio::with('insumos.variantes')->find($this->servicio_seleccionado_id);
+
+        foreach ($servicio_base->insumos as $insumo) {
+            $variantes_usadas = collect($servicio['insumos_usados'] ?? [])
+                ->where('insumo_id', $insumo->id)
+                ->pluck('variante_id')
+                ->toArray();
+
+            $this->insumos_con_variantes[] = [
+                'id' => $insumo->id,
+                'nombre' => $insumo->nombre,
+                'variantes' => $insumo->variantes->map(function ($v) {
+                    return [
+                        'id' => $v->id,
+                        'atributos' => is_string($v->atributos) ? json_decode($v->atributos, true) : $v->atributos,
+                    ];
+                }),
+                'variantes_seleccionadas' => $variantes_usadas,
+            ];
+        }
+
+        $this->modal_servicio_abierto = true;
+    }
+
+
+    public function resetServicio()
+    {
+        $this->servicio_seleccionado_id = null;
+        $this->campos_personalizados = [];
+        $this->insumos_con_variantes = [];
+        $this->modal_servicio_abierto = false;
+        $this->indice_edicion_servicio = null;
+        $this->archivo_diseno = null;
+    }
+
+    public function abrirModalServicio($index)
+    {
+        if (!isset($this->servicios_pedido[$index])) {
+            \Log::warning("Intento de editar servicio no existente en índice: {$index}");
+            return;
+        }
+
+        $this->indice_edicion_servicio = $index;
+        $servicio = $this->servicios_pedido[$index];
+
+        $this->servicio_seleccionado_id = $servicio['servicio_id'];
+        $this->campos_personalizados = $servicio['campos_personalizados'];
+
+        // Limpiar archivo temporal
+        $this->archivo_diseno = null;
+
+        // 🔧 Restaurar nombre del archivo previamente guardado
+        $this->archivo_diseno_nombre = $servicio['archivo_diseno_nombre'] ?? null;
+
+        $this->modal_servicio_abierto = true;
+    }
+
+
+
+    public function guardarEdicionServicio()
+    {
+        if ($this->indice_edicion_servicio === null) return;
+
+        // Validar archivo si se subió uno
+        $this->validate([
+            'archivo_diseno' => 'nullable|file|max:102400|mimes:jpg,jpeg,png,pdf,ai,svg,eps',
+        ]);
+
+        $subtotal = ($this->servicios_pedido[$this->indice_edicion_servicio]['cantidad'] ?? 1)
+            * $this->servicios_pedido[$this->indice_edicion_servicio]['precio_unitario'];
+
+        // Guardar campos personalizados
+        $this->servicios_pedido[$this->indice_edicion_servicio]['campos_personalizados'] = $this->campos_personalizados;
+
+        // Guardar archivo y nombre si aplica
+        if ($this->archivo_diseno) {
+            $this->servicios_pedido[$this->indice_edicion_servicio]['archivo_diseno'] = $this->archivo_diseno;
+            $this->servicios_pedido[$this->indice_edicion_servicio]['archivo_diseno_nombre'] = $this->archivo_diseno->getClientOriginalName();
+        }
+
+        // Guardar subtotal
+        $this->servicios_pedido[$this->indice_edicion_servicio]['subtotal'] = $subtotal;
+
+        // Reset modal
+        $this->resetServicio();
+    }
+
+
+
+    public function recalcularTotal()
+    {
+        $this->total = collect($this->servicios_pedido)->sum(function ($servicio) {
+            return ($servicio['subtotal'] ?? 0);
+        });
+    }
+
+
+
+    public function eliminarArchivo()
+    {
+        $this->archivo_diseno = null;
+        $this->archivo_diseno_nombre = null;
+
+        if ($this->indice_edicion_servicio !== null) {
+            $this->servicios_pedido[$this->indice_edicion_servicio]['archivo_diseno'] = null;
+            $this->servicios_pedido[$this->indice_edicion_servicio]['archivo_diseno_nombre'] = null;
+        }
     }
 
 
