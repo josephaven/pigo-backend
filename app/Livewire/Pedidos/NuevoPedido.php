@@ -71,6 +71,29 @@ class NuevoPedido extends Component
     public $archivo_diseno; // para archivo de diseño (Livewire upload futuro)
     public $archivo_diseno_nombre;
 
+    public $busqueda_servicio = '';
+    public $servicios_sugeridos = [];
+    public $mostrar_sugerencias_servicios = false;
+    public $forzar_render_servicios = 0;
+
+    public $servicio_personalizado = false;
+    public $servicio_personalizado_nombre;
+    public $servicio_personalizado_precio;
+    public $servicio_personalizado_descripcion;
+
+
+    public $usar_campos_personalizados = false;
+    public $busqueda_insumo = '';
+    public $insumos_sugeridos = [];
+
+    public $insumos_agregados = [];
+    public $cantidad_insumo = 1;
+    public $unidad_insumo = '';
+    public $mostrar_sugerencias_insumo = false;
+    public $forzar_render_insumo;
+    public $insumo_seleccionado;
+
+
 
 
 
@@ -116,6 +139,24 @@ class NuevoPedido extends Component
 
             $this->mostrar_sugerencias = true;
         }
+
+        if ($prop === 'busqueda_servicio') {
+            $this->forzar_render_servicios++;
+
+            if (strlen($this->busqueda_servicio) < 2) {
+                $this->servicios_sugeridos = [];
+                $this->mostrar_sugerencias_servicios = false;
+                return;
+            }
+
+            $this->servicios_sugeridos = Servicio::where('activo', true)
+                ->where('nombre', 'ILIKE', '%' . $this->busqueda_servicio . '%')
+                ->limit(5)
+                ->get();
+
+            $this->mostrar_sugerencias_servicios = true;
+        }
+
     }
 
     public function seleccionarCliente($id)
@@ -173,6 +214,38 @@ class NuevoPedido extends Component
             ]);
         }
     }
+
+
+    public function seleccionarServicio($id)
+    {
+        $servicio = Servicio::find($id);
+
+        if ($servicio) {
+            $this->servicio_seleccionado_id = $servicio->id;
+            $this->busqueda_servicio = $servicio->nombre;
+            $this->mostrar_sugerencias_servicios = false;
+            $this->cargarServicioSeleccionado();
+        }
+    }
+
+    public function actualizarSugerenciasServicio()
+    {
+        $this->forzar_render_servicios++;
+
+        if (strlen($this->busqueda_servicio) < 2) {
+            $this->servicios_sugeridos = [];
+            $this->mostrar_sugerencias_servicios = false;
+            return;
+        }
+
+        $this->servicios_sugeridos = Servicio::where('activo', true)
+            ->where('nombre', 'ILIKE', '%' . $this->busqueda_servicio . '%')
+            ->limit(5)
+            ->get();
+
+        $this->mostrar_sugerencias_servicios = true;
+    }
+
 
     public function cargarPedido($id)
     {
@@ -298,17 +371,17 @@ class NuevoPedido extends Component
 
         if (!$servicio) return;
 
-        $campos = $servicio->camposPersonalizados->map(function ($campo) {
+        $this->campos_personalizados = $servicio->camposPersonalizados->map(function ($campo) {
             return [
                 'id' => $campo->id,
                 'nombre' => $campo->nombre,
                 'tipo' => $campo->tipo,
-                'valor' => null,
+                'valor' => null, // Aseguramos valor como nulo inicial
                 'opciones' => $campo->opciones ?? [],
             ];
-        });
+        })->toArray();
 
-        $insumos = $servicio->insumos->map(function ($insumo) {
+        $this->insumos_con_variantes = $servicio->insumos->map(function ($insumo) {
             return [
                 'id' => $insumo->id,
                 'nombre' => $insumo->nombre,
@@ -316,23 +389,30 @@ class NuevoPedido extends Component
                     return [
                         'id' => $v->id,
                         'atributos' => is_string($v->atributos) ? json_decode($v->atributos, true) : $v->atributos,
-
                     ];
                 }),
                 'variantes_seleccionadas' => []
             ];
-        });
-
-        $this->campos_personalizados = $campos->toArray();
-        $this->insumos_con_variantes = $insumos->toArray();
+        })->toArray();
     }
+
 
     public function agregarServicio()
     {
-        $this->validate([
-            'servicio_seleccionado_id' => 'required|exists:servicios,id',
-        ]);
+        if ($this->servicio_personalizado) {
+            // Validación para servicio personalizado
+            $this->validate([
+                'servicio_personalizado_nombre' => 'required|string|max:255',
+                'servicio_personalizado_precio' => 'required|numeric|min:0',
+            ]);
+        } else {
+            // Validación para servicio de catálogo
+            $this->validate([
+                'servicio_seleccionado_id' => 'required|exists:servicios,id',
+            ]);
+        }
 
+        // Validación de campos personalizados (común en ambos casos)
         foreach ($this->campos_personalizados as $i => $campo) {
             $tipo = $campo['tipo'] ?? 'texto';
             $base = "campos_personalizados.$i.valor";
@@ -356,49 +436,81 @@ class NuevoPedido extends Component
                         $base => 'nullable|boolean',
                     ]);
                     break;
-
-                default:
-                    // Tipo desconocido, se ignora o se puede lanzar error si quieres
-                    break;
             }
         }
 
-
-        $servicio = Servicio::find($this->servicio_seleccionado_id);
-
+        // Preparar insumos usados
         $insumos_usados = [];
 
-        foreach ($this->insumos_con_variantes as $insumo) {
-            if (!empty($insumo['variantes_seleccionadas']) && is_array($insumo['variantes_seleccionadas'])) {
-                foreach ($insumo['variantes_seleccionadas'] as $variante_id) {
-                    $variante = VarianteInsumo::find($variante_id);
-                    if ($variante) {
-                        $insumos_usados[] = [
-                            'insumo_id' => $insumo['id'],
-                            'nombre' => $insumo['nombre'],
-                            'variante_id' => $variante->id,
-                            'atributos' => is_string($variante->atributos)
-                                ? json_decode($variante->atributos, true)
-                                : $variante->atributos,
-                        ];
+        if ($this->servicio_personalizado) {
+            // Insumos personalizados simples
+            $insumos_usados = collect($this->insumos_agregados)->map(function ($insumo) {
+                return [
+                    'id' => $insumo['id'],
+                    'nombre' => $insumo['nombre'],
+                    'categoria' => $insumo['categoria'],
+                    'cantidad' => $insumo['cantidad'],
+                    'unidad' => $insumo['unidad'],
+                ];
+            })->toArray();
+        } else {
+            // Insumos con variantes
+            foreach ($this->insumos_con_variantes as $insumo) {
+                if (!empty($insumo['variantes_seleccionadas']) && is_array($insumo['variantes_seleccionadas'])) {
+                    foreach ($insumo['variantes_seleccionadas'] as $variante_id) {
+                        $variante = VarianteInsumo::find($variante_id);
+                        if ($variante) {
+                            $insumos_usados[] = [
+                                'insumo_id' => $insumo['id'],
+                                'nombre' => $insumo['nombre'],
+                                'variante_id' => $variante->id,
+                                'atributos' => is_string($variante->atributos)
+                                    ? json_decode($variante->atributos, true)
+                                    : $variante->atributos,
+                            ];
+                        }
                     }
                 }
             }
         }
 
-        $nuevo_servicio = [
-            'servicio_id' => $servicio->id,
-            'nombre' => $servicio->nombre,
-            'campos_personalizados' => $this->campos_personalizados,
-            'insumos_usados' => $insumos_usados,
-            'cantidad' => 1,
-            'precio_unitario' => $this->tipo_cliente === 'Maquilador' ? $servicio->precio_maquilador : $servicio->precio_normal,
-            'subtotal' => ($this->tipo_cliente === 'Maquilador' ? $servicio->precio_maquilador : $servicio->precio_normal),
-            'total_final' => null,
-            'justificacion_total' => null,
-            'archivo_diseno' => null,
-        ];
+        // Crear el arreglo del servicio
+        if ($this->servicio_personalizado) {
+            $nuevo_servicio = [
+                'servicio_id' => null,
+                'nombre' => $this->servicio_personalizado_nombre,
+                'descripcion' => $this->servicio_personalizado_descripcion,
+                'campos_personalizados' => $this->campos_personalizados,
+                'insumos_usados' => $insumos_usados,
+                'cantidad' => 1,
+                'precio_unitario' => $this->servicio_personalizado_precio,
+                'subtotal' => $this->servicio_personalizado_precio,
+                'total_final' => null,
+                'justificacion_total' => null,
+                'archivo_diseno' => null,
+            ];
+        } else {
+            $servicio = Servicio::find($this->servicio_seleccionado_id);
 
+            $precio = $this->tipo_cliente === 'Maquilador'
+                ? $servicio->precio_maquilador
+                : $servicio->precio_normal;
+
+            $nuevo_servicio = [
+                'servicio_id' => $servicio->id,
+                'nombre' => $servicio->nombre,
+                'campos_personalizados' => $this->campos_personalizados,
+                'insumos_usados' => $insumos_usados,
+                'cantidad' => 1,
+                'precio_unitario' => $precio,
+                'subtotal' => $precio,
+                'total_final' => null,
+                'justificacion_total' => null,
+                'archivo_diseno' => null,
+            ];
+        }
+
+        // Reemplazar si se está editando
         if ($this->indice_edicion_servicio !== null) {
             $this->servicios_pedido[$this->indice_edicion_servicio] = $nuevo_servicio;
         } else {
@@ -408,6 +520,8 @@ class NuevoPedido extends Component
         // Reset de propiedades
         $this->resetServicio();
     }
+
+
 
 
 
@@ -425,33 +539,65 @@ class NuevoPedido extends Component
         if (!$servicio) return;
 
         $this->indice_edicion_servicio = $index;
-        $this->servicio_seleccionado_id = $servicio['servicio_id'];
-        $this->campos_personalizados = $servicio['campos_personalizados'] ?? [];
-        $this->insumos_con_variantes = [];
 
-        $servicio_base = Servicio::with('insumos.variantes')->find($this->servicio_seleccionado_id);
+        if (is_null($servicio['servicio_id'])) {
+            // Servicio personalizado
+            $this->servicio_personalizado = true;
+            $this->servicio_personalizado_nombre = $servicio['nombre'];
+            $this->servicio_personalizado_descripcion = $servicio['descripcion'] ?? '';
+            $this->servicio_personalizado_precio = $servicio['precio_unitario'] ?? 0;
+            $this->insumos_agregados = $servicio['insumos_usados'] ?? [];
 
-        foreach ($servicio_base->insumos as $insumo) {
-            $variantes_usadas = collect($servicio['insumos_usados'] ?? [])
-                ->where('insumo_id', $insumo->id)
-                ->pluck('variante_id')
-                ->toArray();
+            // ✅ Normalizar campos personalizados (evitar arrays)
+            $this->campos_personalizados = collect($servicio['campos_personalizados'] ?? [])
+                ->map(function ($campo) {
+                    $campo['valor'] = is_array($campo['valor'] ?? null)
+                        ? json_encode($campo['valor'])
+                        : $campo['valor'];
+                    return $campo;
+                })->toArray();
+        } else {
+            // Servicio del catálogo
+            $this->servicio_personalizado = false;
+            $this->servicio_seleccionado_id = $servicio['servicio_id'];
+            $this->insumos_con_variantes = [];
 
-            $this->insumos_con_variantes[] = [
-                'id' => $insumo->id,
-                'nombre' => $insumo->nombre,
-                'variantes' => $insumo->variantes->map(function ($v) {
-                    return [
-                        'id' => $v->id,
-                        'atributos' => is_string($v->atributos) ? json_decode($v->atributos, true) : $v->atributos,
-                    ];
-                }),
-                'variantes_seleccionadas' => $variantes_usadas,
-            ];
+            // ✅ Normalizar campos personalizados
+            $this->campos_personalizados = collect($servicio['campos_personalizados'] ?? [])
+                ->map(function ($campo) {
+                    $campo['valor'] = is_array($campo['valor'] ?? null)
+                        ? json_encode($campo['valor'])
+                        : $campo['valor'];
+                    return $campo;
+                })->toArray();
+
+            // Cargar insumos y variantes
+            $servicio_base = Servicio::with('insumos.variantes')->find($this->servicio_seleccionado_id);
+
+            foreach ($servicio_base->insumos as $insumo) {
+                $variantes_usadas = collect($servicio['insumos_usados'] ?? [])
+                    ->where('insumo_id', $insumo->id)
+                    ->pluck('variante_id')
+                    ->toArray();
+
+                $this->insumos_con_variantes[] = [
+                    'id' => $insumo->id,
+                    'nombre' => $insumo->nombre,
+                    'variantes' => $insumo->variantes->map(function ($v) {
+                        return [
+                            'id' => $v->id,
+                            'atributos' => is_string($v->atributos) ? json_decode($v->atributos, true) : $v->atributos,
+                        ];
+                    }),
+                    'variantes_seleccionadas' => $variantes_usadas,
+                ];
+            }
         }
 
         $this->modal_servicio_abierto = true;
     }
+
+
 
 
     public function resetServicio()
@@ -462,6 +608,7 @@ class NuevoPedido extends Component
         $this->modal_servicio_abierto = false;
         $this->indice_edicion_servicio = null;
         $this->archivo_diseno = null;
+        $this->insumos_agregados = [];
     }
 
     public function abrirModalServicio($index)
@@ -497,24 +644,61 @@ class NuevoPedido extends Component
             'archivo_diseno' => 'nullable|file|max:102400|mimes:jpg,jpeg,png,pdf,ai,svg,eps',
         ]);
 
-        $subtotal = ($this->servicios_pedido[$this->indice_edicion_servicio]['cantidad'] ?? 1)
-            * $this->servicios_pedido[$this->indice_edicion_servicio]['precio_unitario'];
+        $servicio = &$this->servicios_pedido[$this->indice_edicion_servicio];
+
+        // Recalcular subtotal
+        $cantidad = $servicio['cantidad'] ?? 1;
+        $precio_unitario = $servicio['precio_unitario'] ?? 0;
+        $servicio['subtotal'] = $cantidad * $precio_unitario;
 
         // Guardar campos personalizados
-        $this->servicios_pedido[$this->indice_edicion_servicio]['campos_personalizados'] = $this->campos_personalizados;
+        $servicio['campos_personalizados'] = $this->campos_personalizados;
 
-        // Guardar archivo y nombre si aplica
+        // Guardar archivo si aplica
         if ($this->archivo_diseno) {
-            $this->servicios_pedido[$this->indice_edicion_servicio]['archivo_diseno'] = $this->archivo_diseno;
-            $this->servicios_pedido[$this->indice_edicion_servicio]['archivo_diseno_nombre'] = $this->archivo_diseno->getClientOriginalName();
+            $servicio['archivo_diseno'] = $this->archivo_diseno;
+            $servicio['archivo_diseno_nombre'] = $this->archivo_diseno->getClientOriginalName();
         }
 
-        // Guardar subtotal
-        $this->servicios_pedido[$this->indice_edicion_servicio]['subtotal'] = $subtotal;
+        // Guardar insumos según el tipo
+        if ($this->servicio_personalizado) {
+            $servicio['insumos_usados'] = collect($this->insumos_agregados)->map(function ($insumo) {
+                return [
+                    'id' => $insumo['id'],
+                    'nombre' => $insumo['nombre'],
+                    'categoria' => $insumo['categoria'],
+                    'cantidad' => $insumo['cantidad'],
+                    'unidad' => $insumo['unidad'],
+                ];
+            })->toArray();
+        } else {
+            $insumos_usados = [];
 
-        // Reset modal
+            foreach ($this->insumos_con_variantes as $insumo) {
+                if (!empty($insumo['variantes_seleccionadas']) && is_array($insumo['variantes_seleccionadas'])) {
+                    foreach ($insumo['variantes_seleccionadas'] as $variante_id) {
+                        $variante = VarianteInsumo::find($variante_id);
+                        if ($variante) {
+                            $insumos_usados[] = [
+                                'insumo_id' => $insumo['id'],
+                                'nombre' => $insumo['nombre'],
+                                'variante_id' => $variante->id,
+                                'atributos' => is_string($variante->atributos)
+                                    ? json_decode($variante->atributos, true)
+                                    : $variante->atributos,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            $servicio['insumos_usados'] = $insumos_usados;
+        }
+
+        // Reset modal y campos
         $this->resetServicio();
     }
+
 
 
 
@@ -539,6 +723,95 @@ class NuevoPedido extends Component
     }
 
 
+    public function buscarInsumos()
+    {
+        if (strlen($this->busqueda_insumo) < 2) {
+            $this->insumos_sugeridos = [];
+            return;
+        }
+
+        $this->insumos_sugeridos = Insumo::with('categoria')
+            ->where('nombre', 'ILIKE', '%' . $this->busqueda_insumo . '%')
+            ->take(10)
+            ->get();
+    }
+
+
+
+
+
+    public function actualizarSugerenciasInsumo()
+    {
+        if (strlen($this->busqueda_insumo) < 2) {
+            $this->insumos_sugeridos = [];
+            $this->mostrar_sugerencias_insumo = false;
+            return;
+        }
+
+        $this->insumos_sugeridos = Insumo::with('categoria')
+            ->where('nombre', 'ILIKE', '%' . $this->busqueda_insumo . '%')
+            ->limit(5)
+            ->get();
+
+        $this->mostrar_sugerencias_insumo = true;
+        $this->forzar_render_insumo++;
+    }
+
+
+    public function seleccionarInsumo($id)
+    {
+        $insumo = Insumo::with('categoria')->find($id);
+
+        if ($insumo) {
+            $this->insumo_id = $insumo->id;
+            $this->busqueda_insumo = $insumo->nombre;
+            $this->mostrar_sugerencias_insumo = false;
+            $this->insumo_seleccionado = $insumo;
+        }
+    }
+
+
+    public function agregarInsumo()
+    {
+        $this->validate([
+            'busqueda_insumo' => 'required|string',
+            'cantidad_insumo' => 'required|numeric|min:0.01',
+            'unidad_insumo' => 'required|string|max:50',
+        ]);
+
+        $insumo = Insumo::with('categoria')->where('nombre', $this->busqueda_insumo)->first();
+        if (!$insumo) return;
+
+        // Evitar duplicados
+        if (collect($this->insumos_agregados)->contains('id', $insumo->id)) return;
+
+        $this->insumos_agregados[] = [
+            'id' => $insumo->id,
+            'nombre' => $insumo->nombre,
+            'categoria' => $insumo->categoria->nombre ?? 'Sin categoría',
+            'cantidad' => $this->cantidad_insumo,
+            'unidad' => $this->unidad_insumo,
+        ];
+
+        $this->busqueda_insumo = '';
+        $this->cantidad_insumo = 1;
+        $this->unidad_insumo = '';
+    }
+
+    public function quitarInsumo($id)
+    {
+        $this->insumos_agregados = array_filter($this->insumos_agregados, function ($insumo) use ($id) {
+            return $insumo['id'] !== $id;
+        });
+    }
+
+    public function getUnidadesExistentesProperty()
+    {
+        return collect(\App\Models\Insumo::pluck('unidad_medida')->filter())
+            ->unique()
+            ->values()
+            ->toArray();
+    }
 
 
 }

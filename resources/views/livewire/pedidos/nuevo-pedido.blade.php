@@ -254,20 +254,182 @@
     <div class="bg-white rounded-lg shadow p-6 space-y-6 border border-gray-200">
         <h2 class="text-lg font-semibold text-gray-800">Servicios del pedido</h2>
 
-        {{-- Selección de servicio --}}
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
+
+        {{-- Switch para activar servicio personalizado --}}
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+            <input type="checkbox"
+                   wire:click="$set('servicio_personalizado', !@js($servicio_personalizado))"
+                   class="rounded border-gray-300">
+            Crear servicio personalizado
+        </label>
+
+
+        {{-- Formulario de servicio personalizado --}}
+        @if($servicio_personalizado)
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+
+                {{-- Nombre del servicio --}}
+                <div class="lg:col-span-6">
+                    <label class="block text-sm text-gray-700 mb-1">Nombre del servicio</label>
+                    <input type="text" wire:model.defer="servicio_personalizado_nombre"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    @error('servicio_personalizado_nombre') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                </div>
+
+                {{-- Precio unitario --}}
+                <div class="lg:col-span-6">
+                    <label class="block text-sm text-gray-700 mb-1">Precio unitario</label>
+                    <input type="number" min="0" wire:model.defer="servicio_personalizado_precio"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                    @error('servicio_personalizado_precio') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                </div>
+
+                {{-- Descripción --}}
+                <div class="lg:col-span-12">
+                    <label class="block text-sm text-gray-700 mb-1">Descripción (opcional)</label>
+                    <textarea wire:model.defer="servicio_personalizado_descripcion"
+                              class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                              rows="2"></textarea>
+                </div>
+
+                {{-- Checkbox usar campos personalizados --}}
+                <div class="lg:col-span-12">
+                    <label class="flex items-center gap-2 text-sm text-gray-700">
+                        <input type="checkbox"
+                               wire:click="$set('usar_campos_personalizados', !@js($usar_campos_personalizados))"
+                               class="rounded border-gray-300">
+                        ¿Usar campos personalizados?
+                    </label>
+                </div>
+
+            </div>
+
+                {{-- FORMULARIO: Agregar insumos al servicio personalizado --}}
+                <div class="mt-6 w-full">
+                    <h3 class="text-sm font-semibold text-gray-800 mb-2">Insumos agregados</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end w-full" wire:key="formulario-insumo-{{ count($insumos_agregados) }}">
+                        <div class="relative col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Buscar insumo</label>
+                            <input type="text"
+                                   wire:model="busqueda_insumo"
+                                   wire:keyup="actualizarSugerenciasInsumo"
+                                   placeholder="Nombre del insumo..."
+                                   autocomplete="off"
+                                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+
+                            <span class="hidden">{{ $forzar_render_insumo }}</span>
+
+                            <ul class="absolute z-50 bg-white border rounded shadow w-full mt-1 max-h-48 overflow-auto
+                {{ $mostrar_sugerencias_insumo && $insumos_sugeridos ? '' : 'hidden' }}">
+                                @foreach ($insumos_sugeridos as $i)
+                                    @if (!in_array($i->id, array_column($insumos_agregados, 'id')))
+                                        <li wire:click="seleccionarInsumo({{ $i->id }})"
+                                            class="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer">
+                                            {{ $i->nombre }} ({{ $i->categoria->nombre ?? 'Sin categoría' }})
+                                        </li>
+                                    @endif
+                                @endforeach
+                            </ul>
+                            @error('insumo_id') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Cantidad</label>
+                            <input type="number" step="0.01" wire:model.defer="cantidad_insumo"
+                                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+                            @error('cantidad_insumo') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="col-span-1">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Unidad de medida</label>
+                            <input type="text" list="unidades" wire:model.defer="unidad_insumo"
+                                   class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm" />
+                            <datalist id="unidades">
+                                @foreach($this->unidadesExistentes as $unidad)
+                                    <option value="{{ $unidad }}">{{ $unidad }}</option>
+                                @endforeach
+                            </datalist>
+                            @error('unidad_insumo') <span class="text-xs text-red-600">{{ $message }}</span> @enderror
+                        </div>
+
+                        <div class="col-span-1">
+                            <button type="button" wire:click="agregarInsumo"
+                                    class="bg-[#003844] text-white w-full px-4 py-2 rounded-md text-sm hover:bg-[#002f39]">
+                                Agregar insumo
+                            </button>
+                        </div>
+                    </div>
+
+                    {{-- Tabla de insumos agregados --}}
+                    <div class="overflow-x-auto mt-4">
+                        <table class="w-full text-sm text-left border border-gray-300">
+                            <thead class="bg-gray-100 text-gray-700">
+                            <tr>
+                                <th class="px-4 py-2 border">Nombre</th>
+                                <th class="px-4 py-2 border">Categoría</th>
+                                <th class="px-4 py-2 border">Cantidad</th>
+                                <th class="px-4 py-2 border">Unidad</th>
+                                <th class="px-4 py-2 border text-center">Acción</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @forelse ($insumos_agregados as $insumo)
+                                <tr class="border-t">
+                                    <td class="px-4 py-2 border">{{ $insumo['nombre'] }}</td>
+                                    <td class="px-4 py-2 border">{{ $insumo['categoria'] ?? 'Sin categoría' }}</td>
+                                    <td class="px-4 py-2 border">{{ $insumo['cantidad'] }}</td>
+                                    <td class="px-4 py-2 border">{{ $insumo['unidad'] }}</td>
+                                    <td class="px-4 py-2 border text-center">
+                                        <button type="button" wire:click="quitarInsumo({{ $insumo['id'] }})"
+                                                class="text-red-600 hover:underline text-xs">Eliminar</button>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="px-4 py-3 text-center text-gray-500">No se han agregado insumos.</td>
+                                </tr>
+                            @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        @endif
+
+
+        {{-- Buscador de servicio --}}
+        @if(!$servicio_personalizado)
+            <div class="mb-4">
                 <label class="block text-sm text-gray-700 mb-1">Seleccionar servicio</label>
-                <select wire:model="servicio_seleccionado_id" wire:change="cargarServicioSeleccionado"
-                        class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
-                    <option value="">Selecciona uno</option>
-                    @foreach ($servicios_catalogo as $servicio)
-                        <option value="{{ $servicio->id }}">{{ $servicio->nombre }}</option>
-                    @endforeach
-                </select>
+                <span class="hidden">{{ $forzar_render_servicios }}</span>
+
+                <div class="relative">
+                    <input type="text"
+                           wire:model="busqueda_servicio"
+                           wire:keyup="actualizarSugerenciasServicio"
+                           placeholder="Buscar servicio..."
+                           autocomplete="off"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+
+                    {{-- Render forzado invisible para Livewire --}}
+                    <span class="hidden">{{ $forzar_render_servicios }}</span>
+
+                    <ul class="absolute z-50 bg-white border rounded shadow w-full mt-1 max-h-48 overflow-auto
+                        {{ $mostrar_sugerencias_servicios && count($servicios_sugeridos) ? '' : 'hidden' }}">
+                        @foreach ($servicios_sugeridos as $s)
+                            <li wire:click="seleccionarServicio({{ $s->id }})"
+                                class="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer">
+                                {{ $s->nombre }}
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+
                 @error('servicio_seleccionado_id') <span class="text-red-600 text-xs">{{ $message }}</span> @enderror
             </div>
-        </div>
+        @endif
 
         {{-- Campos personalizados dinámicos --}}
         @if(!empty($campos_personalizados))
@@ -328,8 +490,6 @@
                 @endforeach
             </div>
         @endif
-
-
 
         {{-- Botón para agregar servicio --}}
         <div class="flex justify-end">
@@ -397,21 +557,19 @@
                                 @endif
                             </td>
 
-
-
                             {{-- Campos personalizados --}}
                             <td class="px-4 py-2 text-xs text-gray-700 space-y-1">
                                 @foreach ($s['campos_personalizados'] as $campo)
-                                    @if (!empty($campo['valor']))
-                                        <div>
-                                            <strong>{{ $campo['nombre'] }}:</strong>
-                                            @if ($campo['tipo'] === 'booleano')
-                                                {{ $campo['valor'] ? 'Sí' : 'No' }}
-                                            @else
-                                                {{ $campo['valor'] }}
-                                            @endif
-                                        </div>
-                                    @endif
+                                    <div>
+                                        <strong>{{ $campo['nombre'] }}:</strong>
+                                        @if ($campo['tipo'] === 'booleano')
+                                            {{ $campo['valor'] ? 'Sí' : 'No' }}
+                                        @elseif (is_null($campo['valor']) || $campo['valor'] === '')
+                                            <span class="text-gray-400 italic">—</span>
+                                        @else
+                                            {{ $campo['valor'] }}
+                                        @endif
+                                    </div>
                                 @endforeach
                             </td>
 
@@ -439,13 +597,9 @@
                                 <button wire:click="eliminarServicio({{ $i }})"
                                         class="text-red-600 hover:underline text-sm block">Eliminar</button>
                             </td>
-
-
                         </tr>
                     @endforeach
                     </tbody>
-
-
                 </table>
             </div>
         @endif
@@ -466,7 +620,7 @@
 
     {{-- Modal de edición de servicio --}}
     @if ($modal_servicio_abierto)
-        <div class="fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
             <div class="bg-white w-full max-w-3xl mx-4 rounded-lg shadow-lg p-6 relative z-50 overflow-y-auto max-h-[90vh]">
 
                 {{-- Encabezado --}}
@@ -584,11 +738,7 @@
                         Guardar cambios
                     </button>
                 </div>
-
             </div>
         </div>
     @endif
-
-
-
 </div>
