@@ -13,7 +13,7 @@ class Pedido extends Model
     protected $fillable = [
         'cliente_id', 'sucursal_registro_id', 'sucursal_entrega_id',
         'sucursal_elaboracion_id', 'user_id', 'fecha_entrega',
-        'total', 'anticipo', 'justificacion_precio'
+        'total', 'anticipo', 'justificacion_precio', 'metodo_pago_id'
     ];
 
     public function cliente() {
@@ -47,5 +47,12 @@ class Pedido extends Model
     public function factura() {
         return $this->hasOne(FacturaPedido::class);
     }
+
+    public function metodoPago()
+    {
+        return $this->belongsTo(MetodoPago::class, 'metodo_pago_id', 'id');
+    }
+
 }
+
 

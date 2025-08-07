@@ -6,6 +6,8 @@ use App\Models\Pedido;
 use App\Models\Sucursal;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
+use App\Models\HistorialPedido;
+use Illuminate\Support\Facades\Auth;
 
 class Pedidos extends Component
 {
@@ -14,6 +16,10 @@ class Pedidos extends Component
     public $filtro_fecha = '';
     public $filtro_estado = '';
     public $filtroKey;
+    public $mostrar_modal_motivo = false;
+    public $motivo = '';
+    public $variante_id_motivo;
+    public $nuevo_estado = '';
 
     public function mount()
     {
@@ -22,7 +28,7 @@ class Pedidos extends Component
 
     public function render()
     {
-        $pedidos = Pedido::with(['cliente', 'usuario', 'sucursalEntrega'])
+        $pedidos = Pedido::with(['cliente', 'usuario', 'sucursalEntrega', 'variantes' => fn($q) => $q->orderBy('id')])
             ->when($this->filtro_folio, fn($q) =>
             $q->where('id', $this->filtro_folio)
             )
@@ -63,5 +69,81 @@ class Pedidos extends Component
     {
         // No es necesario código. Solo fuerza render.
     }
-}
 
+    public function actualizarEstado($varianteId, $nuevoEstado)
+    {
+        if (in_array($nuevoEstado, ['cancelado', 'devuelto'])) {
+            $this->mostrar_modal_motivo = true;
+            $this->variante_id_motivo = $varianteId;
+            $this->nuevo_estado = $nuevoEstado;
+            return;
+        }
+
+        $this->cambiarEstado($varianteId, $nuevoEstado);
+    }
+
+    public function guardarMotivo()
+    {
+        $this->validate(['motivo' => 'required|string|min:3']);
+
+        $this->cambiarEstado($this->variante_id_motivo, $this->nuevo_estado, $this->motivo);
+
+        $this->reset([
+            'motivo',
+            'variante_id_motivo',
+            'mostrar_modal_motivo',
+            'nuevo_estado'
+        ]);
+
+        // ✅ Toast después de guardar motivo
+        $this->js(<<<JS
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    tipo: 'success',
+                    mensaje: 'Estado actualizado correctamente con motivo'
+                }
+            }));
+        JS);
+    }
+
+    private function cambiarEstado($varianteId, $nuevoEstado, $motivo = null)
+    {
+        $variante = \App\Models\PedidoServicioVariante::find($varianteId);
+        if (!$variante) {
+            // ❌ Toast de error
+            $this->js(<<<JS
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: {
+                    tipo: 'error',
+                    mensaje: 'No se encontró la variante del servicio'
+                }
+            }));
+        JS);
+            return;
+        }
+
+        $variante->estado = $nuevoEstado;
+        $variante->save();
+
+        HistorialPedido::create([
+            'pedido_servicio_variante_id' => $variante->id,
+            'user_id' => Auth::id(),
+            'nuevo_estado' => $nuevoEstado,
+            'motivo' => $motivo,
+        ]);
+
+        // ✅ Toast de confirmación general
+        $this->js(<<<JS
+        window.dispatchEvent(new CustomEvent('toast', {
+            detail: {
+                tipo: 'info',
+                mensaje: 'Estado cambiado a "$nuevoEstado"'
+            }
+        }));
+    JS);
+
+        // 🔁 Forzar refresco visual
+        $this->dispatch('$refresh');
+    }
+
+}
