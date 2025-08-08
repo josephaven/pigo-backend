@@ -59,6 +59,8 @@ Route::middleware([
     Route::get('/pedidos', Pedidos::class)->name('pedidos');
     Route::get('/pedidos/para-elaboracion', PedidosParaElaboracion::class)->name('pedidos.para-elaboracion');
     Route::get('/pedidos/nuevo', NuevoPedido::class)->name('pedidos.nuevo');
+    Route::get('/pedidos/{id}/editar', NuevoPedido::class)->name('pedidos.editar');
+
 
 
     // Aquí puedes agregar otras rutas por módulo en el futuro...
