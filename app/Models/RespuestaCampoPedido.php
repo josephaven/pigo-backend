@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class RespuestaCampoPedido extends Model
 {
     use HasFactory;
+    protected $table = 'respuestas_campos_pedido';
 
     protected $fillable = ['pedido_servicio_variante_id', 'campo_personalizado_id', 'valor'];
 
