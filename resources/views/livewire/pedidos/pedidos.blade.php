@@ -90,7 +90,7 @@
                     <td class="px-4 py-2">{{ $pedido->cliente->nombre_completo ?? '-' }}</td>
                     <td class="px-4 py-2 space-y-1">
                         @foreach($pedido->variantes as $variante)
-                            <div class="text-xs  truncate ">
+                            <div class="text-xs truncate">
                                 {{ $variante->nombre_personalizado ?? ($variante->servicio->nombre ?? 'Servicio no disponible') }}
                             </div>
                         @endforeach
@@ -100,7 +100,7 @@
                     <td class="px-4 py-2 space-y-2">
                         @foreach($pedido->variantes as $variante)
                             <div class="flex justify-between items-center gap-4 text-sm" wire:key="variante-{{ $variante->id }}">
-                                <span class="text-sm text-gray-700">{{ $variante->nombre_personalizado ?? ($variante->servicio->nombre ?? '-') }}</span>
+                                <span class="text-xs text-gray-700">{{ $variante->nombre_personalizado ?? ($variante->servicio->nombre ?? '-') }}</span>
 
                                 <select
                                     wire:change="actualizarEstado({{ $variante->id }}, $event.target.value)"
