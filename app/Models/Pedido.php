@@ -16,6 +16,10 @@ class Pedido extends Model
         'total', 'anticipo', 'justificacion_precio', 'metodo_pago_id'
     ];
 
+    protected $casts = [
+        'fecha_entrega' => 'datetime', // o 'datetime'
+    ];
+
     public function cliente() {
         return $this->belongsTo(Cliente::class);
     }

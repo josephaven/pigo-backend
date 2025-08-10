@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\PedidoServicioVariante;
 use App\Models\PedidoInsumo;
 use App\Models\RespuestaCampoPedido;
+use Illuminate\Validation\Validator;
 
 
 
@@ -117,6 +118,12 @@ class NuevoPedido extends Component
 
     public $insumo_id = null;
 
+    public $modal_total_final = null;
+    public $modal_justificacion_total = null;
+
+    public int $totals_refresh = 0;
+
+
 
 
 
@@ -135,10 +142,95 @@ class NuevoPedido extends Component
 
     public function render()
     {
-        $this->recalcularTotal();
         return view('livewire.pedidos.nuevo-pedido', [
             'sucursales' => Sucursal::all(),
+            'subtotal'   => $this->calcularSubtotalServicios(),
         ])->layout('layouts.app');
+    }
+
+
+    protected function rules()
+    {
+        $rules = [
+            // Base del pedido
+            'cliente_id'               => ['required','exists:clientes,id'],
+            'sucursal_entrega_id'      => ['required','exists:sucursales,id'],
+            'sucursal_elaboracion_id'  => ['required','exists:sucursales,id'],
+            'fecha_entrega'            => ['required','date','after_or_equal:today'],
+            'total'                    => ['required','numeric','min:0'],
+            'anticipo'                 => ['required','numeric','min:0'],
+            'justificacion_precio'     => ['nullable','string','max:500'],
+            'metodo_pago_id'           => ['required','exists:metodo_pagos,id'],
+        ];
+
+        // Si requiere factura, valida los campos fiscales
+        if ($this->requiere_factura) {
+            $rules = array_merge($rules, [
+                'rfc'                 => ['required','string','max:13'],
+                'razon_social'        => ['required','string','max:255'],
+                'direccion_fiscal'    => ['required','string','max:255'],
+                'uso_cfdi'            => ['nullable','string','max:50'],
+                'metodo_pago_factura' => ['nullable','string','max:100'],
+            ]);
+        }
+
+        // Si es cliente nuevo, valida datos del cliente
+        if ($this->cliente_nuevo) {
+            $rules = array_merge($rules, [
+                'nombre_cliente'    => ['required','string','max:255'],
+                'telefono_cliente'  => ['required', Rule::unique('clientes', 'telefono')],
+                'tipo_cliente'      => ['required','in:Normal,Frecuente,Maquilador'],
+                'ocupacion_cliente' => ['nullable','string','max:255'],
+                'fecha_nacimiento'  => ['nullable','date','before:today'],
+            ]);
+        }
+
+        return $rules;
+    }
+
+
+
+    public function messages()
+    {
+        return [
+            // Pedido
+            'cliente_id.required' => 'Selecciona un cliente.',
+            'fecha_entrega.after_or_equal' => 'La fecha de entrega no puede ser anterior a hoy.',
+            'total.required' => 'El total es obligatorio.',
+            'total.numeric' => 'El total debe ser numérico.',
+            'total.min' => 'El total no puede ser negativo.',
+            'anticipo.required' => 'El anticipo es obligatorio.',
+            'anticipo.numeric' => 'El anticipo debe ser numérico.',
+            'anticipo.min' => 'El anticipo no puede ser negativo.',
+            'justificacion_precio.max' => 'La justificación es demasiado larga.',
+
+            // Cliente nuevo
+            'nombre_cliente.required' => 'El nombre del cliente es obligatorio.',
+            'telefono_cliente.required' => 'El teléfono es obligatorio.',
+            'telefono_cliente.unique' => 'Este teléfono ya existe en tus clientes.',
+            'tipo_cliente.required' => 'El tipo de cliente es obligatorio.',
+            'fecha_nacimiento.before' => 'La fecha de nacimiento debe ser anterior a hoy.',
+
+            // Factura
+            'rfc.required' => 'El RFC es obligatorio.',
+            'razon_social.required' => 'La razón social es obligatoria.',
+            'direccion_fiscal.required' => 'La dirección fiscal es obligatoria.',
+        ];
+    }
+
+    public function attributes()
+    {
+        return [
+            'cliente_id' => 'cliente',
+            'sucursal_entrega_id' => 'sucursal de entrega',
+            'sucursal_elaboracion_id' => 'sucursal de elaboración',
+            'fecha_entrega' => 'fecha de entrega',
+            'metodo_pago_id' => 'método de pago',
+            'justificacion_precio' => 'justificación',
+            'telefono_cliente' => 'teléfono',
+            'razon_social' => 'razón social',
+            'direccion_fiscal' => 'dirección fiscal',
+        ];
     }
 
 
@@ -287,7 +379,7 @@ class NuevoPedido extends Component
 
         $this->sucursal_entrega_id     = $pedido->sucursal_entrega_id;
         $this->sucursal_elaboracion_id = $pedido->sucursal_elaboracion_id;
-        $this->fecha_entrega           = $pedido->fecha_entrega;
+        $this->fecha_entrega = optional($pedido->fecha_entrega)->toDateString(); // 'Y-m-d'
         $this->anticipo                = $pedido->anticipo;
         $this->total                   = $pedido->total;
         $this->justificacion_precio    = $pedido->justificacion_precio;
@@ -369,22 +461,25 @@ class NuevoPedido extends Component
         $this->busqueda_servicio          = '';
         $this->servicio_personalizado     = false;
         $this->usar_campos_personalizados = false;
+
+        $this->total_tocado_manualmente = true;
     }
 
 
 
     public function guardar()
     {
-        // 1) Cliente nuevo (igual que lo tienes)
-        if ($this->cliente_nuevo) {
-            $this->validate([
-                'nombre_cliente'    => 'required|string|max:255',
-                'telefono_cliente'  => ['required', Rule::unique('clientes', 'telefono')],
-                'tipo_cliente'      => ['required', 'in:Normal,Frecuente,Maquilador'],
-                'ocupacion_cliente' => 'nullable|string|max:255',
-                'fecha_nacimiento'  => 'nullable|date|before:today',
-            ]);
+        // Al menos un servicio
+        if (count($this->servicios_pedido) === 0) {
+            $this->addError('servicios_pedido', 'Debes agregar al menos un servicio al pedido.');
+            return;
+        }
 
+        // ÚNICA llamada: toma reglas dinámicas de rules()
+        $this->validate();
+
+        // Cliente nuevo (con reglas ya validadas)
+        if ($this->cliente_nuevo) {
             $nuevo = Cliente::create([
                 'nombre_completo'  => $this->nombre_cliente,
                 'telefono'         => $this->telefono_cliente,
@@ -393,52 +488,12 @@ class NuevoPedido extends Component
                 'fecha_nacimiento' => $this->fecha_nacimiento,
                 'sucursal_id'      => $this->sucursal_registro_id,
             ]);
-
-            $this->cliente_id = $nuevo->id;
+            $this->cliente_id   = $nuevo->id;
             $this->cliente_nuevo = false;
             $this->dispatch('toast', 'Cliente nuevo registrado correctamente');
         }
 
-        // 2) Recalcular totales
-        $montoTotal = 0.0;
-        foreach ($this->servicios_pedido as &$s) {
-            $qty    = (int)($s['cantidad'] ?? 1);
-            $precio = (float)($s['precio_unitario'] ?? 0);
-            $s['subtotal'] = $qty * $precio;
-            $montoTotal += isset($s['total_final']) && $s['total_final'] !== null
-                ? (float)$s['total_final']
-                : (float)$s['subtotal'];
-        }
-        unset($s);
-        $this->total = $montoTotal;
-
-        if (count($this->servicios_pedido) === 0) {
-            $this->addError('servicios_pedido', 'Debes agregar al menos un servicio al pedido.');
-            return;
-        }
-
-        // 3) Validaciones del pedido
-        $this->validate([
-            'cliente_id'              => ['required', Rule::exists('clientes', 'id')],
-            'sucursal_entrega_id'     => ['required', Rule::exists('sucursales', 'id')],
-            'sucursal_elaboracion_id' => ['required', Rule::exists('sucursales', 'id')],
-            'fecha_entrega'           => ['required', 'date', 'after_or_equal:today'],
-            'anticipo'                => ['required', 'numeric', 'min:0'],
-            'total'                   => ['required', 'numeric', 'min:0'],
-            'metodo_pago_id'          => ['required', Rule::exists('metodo_pagos', 'id')],
-        ]);
-
-        if ($this->requiere_factura) {
-            $this->validate([
-                'rfc'                 => 'required|string|max:13',
-                'razon_social'        => 'required|string|max:255',
-                'direccion_fiscal'    => 'required|string|max:255',
-                'uso_cfdi'            => 'nullable|string|max:50',
-                'metodo_pago_factura' => 'nullable|string|max:100',
-            ]);
-        }
-
-        // 4) Persistir todo
+        // Persistencia
         DB::transaction(function () {
             $data = [
                 'cliente_id'              => $this->cliente_id,
@@ -453,22 +508,16 @@ class NuevoPedido extends Component
                 'user_id'                 => Auth::id(),
             ];
 
-            // ====== MODO EDICIÓN ======
             if ($this->modo_edicion && $this->pedido_id) {
-                $pedido = Pedido::with('variantes.insumos', 'variantes.respuestasCampos')
-                    ->findOrFail($this->pedido_id);
-
-                // 4.1 Cabecera
+                $pedido = Pedido::with('variantes.insumos','variantes.respuestasCampos')->findOrFail($this->pedido_id);
                 $pedido->update($data);
 
-                // 4.2 Borrar líneas actuales (y sus hijos)
                 foreach ($pedido->variantes as $v) {
                     $v->insumos()->delete();
                     $v->respuestasCampos()->delete();
                     $v->delete();
                 }
 
-                // 4.3 Recrear líneas desde $this->servicios_pedido
                 foreach ($this->servicios_pedido as $servicio) {
                     $variante = PedidoServicioVariante::create([
                         'pedido_id'            => $pedido->id,
@@ -485,14 +534,11 @@ class NuevoPedido extends Component
                         'estado'               => 'en_espera',
                     ]);
 
-                    // Insumos
                     foreach (($servicio['insumos_usados'] ?? []) as $ins) {
                         $insumoId = $ins['insumo_id'] ?? $ins['id'] ?? null;
                         if (!$insumoId) continue;
-
                         $insumoObj = Insumo::find($insumoId);
-                        $unidad = $ins['unidad'] ?? ($insumoObj->unidad_medida ?? '');
-
+                        $unidad    = $ins['unidad'] ?? ($insumoObj->unidad_medida ?? '');
                         PedidoInsumo::create([
                             'pedido_servicio_variante_id' => $variante->id,
                             'insumo_id'   => $insumoId,
@@ -505,11 +551,9 @@ class NuevoPedido extends Component
                         ]);
                     }
 
-                    // Respuestas de campos (solo si hay id de campo)
                     foreach (($servicio['campos_personalizados'] ?? []) as $c) {
                         $campoId = $c['id'] ?? null;
                         if (!$campoId) continue;
-
                         RespuestaCampoPedido::create([
                             'pedido_servicio_variante_id' => $variante->id,
                             'campo_personalizado_id'      => $campoId,
@@ -520,7 +564,7 @@ class NuevoPedido extends Component
                     }
                 }
 
-                // 4.4 Factura: upsert simple
+                // Factura (upsert)
                 $existente = $pedido->factura;
                 if ($this->requiere_factura) {
                     $payload = [
@@ -539,7 +583,7 @@ class NuevoPedido extends Component
                 return; // fin edición
             }
 
-            // ====== CREACIÓN ======
+            // Creación
             $pedido = Pedido::create($data);
             $this->pedido_id = $pedido->id;
 
@@ -562,10 +606,8 @@ class NuevoPedido extends Component
                 foreach (($servicio['insumos_usados'] ?? []) as $ins) {
                     $insumoId = $ins['insumo_id'] ?? $ins['id'] ?? null;
                     if (!$insumoId) continue;
-
                     $insumoObj = Insumo::find($insumoId);
-                    $unidad = $ins['unidad'] ?? ($insumoObj->unidad_medida ?? '');
-
+                    $unidad    = $ins['unidad'] ?? ($insumoObj->unidad_medida ?? '');
                     PedidoInsumo::create([
                         'pedido_servicio_variante_id' => $variante->id,
                         'insumo_id'   => $insumoId,
@@ -581,7 +623,6 @@ class NuevoPedido extends Component
                 foreach (($servicio['campos_personalizados'] ?? []) as $c) {
                     $campoId = $c['id'] ?? null;
                     if (!$campoId) continue;
-
                     RespuestaCampoPedido::create([
                         'pedido_servicio_variante_id' => $variante->id,
                         'campo_personalizado_id'      => $campoId,
@@ -607,6 +648,7 @@ class NuevoPedido extends Component
         session()->flash('mensaje', $this->modo_edicion ? 'Pedido actualizado correctamente' : 'Pedido creado correctamente');
         return redirect()->route('pedidos');
     }
+
 
 
 
@@ -813,6 +855,8 @@ class NuevoPedido extends Component
         $this->resetServicio();
         $this->busqueda_servicio = '';
         $this->mostrar_sugerencias_servicios = false;
+        $this->recalcularTotal();
+        $this->totals_refresh++;
     }
 
 
@@ -822,6 +866,8 @@ class NuevoPedido extends Component
     {
         unset($this->servicios_pedido[$index]);
         $this->servicios_pedido = array_values($this->servicios_pedido); // reindexar
+        $this->recalcularTotal();
+        $this->totals_refresh++;
     }
 
 
@@ -843,6 +889,9 @@ class NuevoPedido extends Component
         // 2) Archivo de diseño (reset temporal + nombre previo)
         $this->archivo_diseno = null;
         $this->archivo_diseno_nombre = $servicio['archivo_diseno_nombre'] ?? null;
+        $this->modal_total_final = $servicio['total_final'] ?? null;
+        $this->modal_justificacion_total = $servicio['justificacion_total'] ?? null;
+
 
         // 3) Preparar insumos según el tipo (SIN tocar el toggle)
         $tipo = $servicio['tipo'] ?? (is_null($servicio['servicio_id']) ? 'personalizado' : 'catalogo');
@@ -895,6 +944,9 @@ class NuevoPedido extends Component
         $this->indice_edicion_servicio = null;
         $this->archivo_diseno = null;
         $this->insumos_agregados = [];
+
+        $this->modal_total_final         = null;
+        $this->modal_justificacion_total = null;
     }
 
     public function abrirModalServicio($index)
@@ -934,10 +986,32 @@ class NuevoPedido extends Component
         // Derivar el tipo de la fila (no del toggle)
         $tipo = $servicio['tipo'] ?? (is_null($servicio['servicio_id']) ? 'personalizado' : 'catalogo');
 
-        // Recalcular subtotal/total en base a cantidad y precio
-        $cantidad = (int)($servicio['cantidad'] ?? 1);
-        $precio_unitario = (float)($servicio['precio_unitario'] ?? 0);
-        $servicio['subtotal'] = $cantidad * $precio_unitario;
+        // Normaliza y recalcula subtotal
+        $cantidad = (int) max(1, (int)($servicio['cantidad'] ?? 1));
+        $precio_unitario = (float) ($servicio['precio_unitario'] ?? 0);
+        $servicio['cantidad']        = $cantidad;
+        $servicio['precio_unitario'] = $precio_unitario;
+        $servicio['subtotal']        = round($cantidad * $precio_unitario, 2);
+
+        // ✅ Manejo de override (Total final) desde el modal
+        // - Si el modal tiene un valor, lo aplicamos.
+        // - Si es vacío o igual al subtotal, limpiamos override y justificación.
+        $tf = $this->modal_total_final;
+        $tf = ($tf === '' || $tf === null) ? null : round((float)$tf, 2);
+
+        if ($tf !== null && $tf !== $servicio['subtotal']) {
+            // Si el override difiere del subtotal, pide justificación (en el modal)
+            if (trim((string)$this->modal_justificacion_total) === '') {
+                $this->addError('modal_justificacion_total', 'Explica por qué el total final difiere del subtotal.');
+                return;
+            }
+            $servicio['total_final']         = $tf;
+            $servicio['justificacion_total'] = $this->modal_justificacion_total;
+        } else {
+            // Sin diferencia → no hay override
+            $servicio['total_final']         = null;
+            $servicio['justificacion_total'] = null;
+        }
 
         // Guardar campos personalizados (valores)
         $servicio['campos_personalizados'] = $this->campos_personalizados;
@@ -983,7 +1057,12 @@ class NuevoPedido extends Component
 
         // Cerrar modal y limpiar
         $this->resetServicio();
+
+        // 🔁 Recalcular resumen y sincronizar total si el usuario no lo tocó
+        $this->recalcularTotal();
+        $this->totals_refresh++;
     }
+
 
 
 
@@ -997,6 +1076,10 @@ class NuevoPedido extends Component
             $precio   = (float)($s['precio_unitario'] ?? 0);
             return $cantidad * $precio;
         });
+
+        if ($this->total <= 0) {
+            $this->anticipo = 0;
+        }
     }
 
 
@@ -1257,6 +1340,105 @@ class NuevoPedido extends Component
         $this->campos_personalizados = [];
         // NO tocar $this->servicio_personalizado; el toggle queda como esté
     }
+
+
+
+    public function calcularSubtotalServicios(): float
+    {
+        $suma = 0;
+        foreach ($this->servicios_pedido as $srv) {
+            $cantidad = (float) ($srv['cantidad'] ?? 1);
+            $precio = (float) ($srv['precio_unitario'] ?? 0);
+            $suma += ($cantidad * $precio);
+        }
+        return round($suma, 2);
+    }
+
+    // ✅ Restante (propiedad derivada)
+    public function getRestanteProperty(): float
+    {
+        $t = (float) ($this->total ?? 0);
+        $a = (float) ($this->anticipo ?? 0);
+        $restante = $t - $a;
+        // Evitamos -0.00
+        return round($restante, 2);
+    }
+
+    public function updatedTotal($value)
+    {
+        $this->total_tocado_manualmente = true;
+        $this->total = $this->sanearNumero($value);
+
+        if (round($this->total,2) === round($this->calcularSubtotalServicios(),2)) {
+            $this->justificacion_precio = ''; // ✅ opcional
+        }
+
+        if ($this->anticipo > $this->total) {
+            $this->anticipo = $this->total;
+            $this->dispatch('toast', type: 'info', message: 'El anticipo no puede ser mayor que el total. Se ajustó automáticamente.');
+        }
+    }
+
+
+    public function updatedAnticipo($value)
+    {
+        $this->anticipo = $this->sanearNumero($value);
+        if ($this->anticipo > $this->total) {
+            $this->anticipo = $this->total;
+            $this->dispatch('toast', type: 'info', message: 'El anticipo no puede ser mayor que el total. Se ajustó automáticamente.');
+        }
+    }
+
+    private function sanearNumero($v): float
+    {
+        $n = (float) ($v === '' ? 0 : $v);
+        if ($n < 0) $n = 0;
+        return round($n, 2);
+    }
+
+    public function withValidator($validator)
+    {
+        $validator->after(function ($v) {
+            // Anticipo ≤ Total
+            if ($this->anticipo > $this->total) {
+                $v->errors()->add('anticipo', 'El anticipo no puede ser mayor que el total.');
+            }
+
+        });
+    }
+
+
+
+    public function updatedServiciosPedido($value, $name)
+    {
+        // Si cambian cantidad, precio_unitario o total_final de alguna fila, recalcula su subtotal
+        if (preg_match('/servicios_pedido\.(\d+)\.(cantidad|precio_unitario|total_final)/', $name, $m)) {
+            $i = (int) $m[1];
+
+            $qty    = (int) max(1, (int)($this->servicios_pedido[$i]['cantidad'] ?? 1));
+            $precio = (float) ($this->servicios_pedido[$i]['precio_unitario'] ?? 0);
+
+            $this->servicios_pedido[$i]['cantidad']       = $qty; // normaliza
+            $this->servicios_pedido[$i]['precio_unitario'] = $precio;
+            $this->servicios_pedido[$i]['subtotal']        = round($qty * $precio, 2);
+        }
+
+        // Recalcula resumen y sincroniza si el usuario no ha tocado manualmente el total
+        $this->recalcularTotal();
+        $this->totals_refresh++;
+    }
+
+    private function hasLineOverrides(): bool
+    {
+        return collect($this->servicios_pedido)
+            ->contains(fn ($s) => isset($s['total_final']) && $s['total_final'] !== null);
+    }
+
+
+
+
+
+
 
 
 

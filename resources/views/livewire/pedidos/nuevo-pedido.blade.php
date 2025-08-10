@@ -703,6 +703,53 @@
 
 
 
+    {{-- === Sección Totales (F4.3/F4.11) === --}}
+    <div wire:key="totals-{{ $totals_refresh }}">
+        <div class="bg-white rounded-lg shadow p-6 space-y-6 border border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-800">Resumen de pago</h2>
+
+            {{-- Subtotal (sólo lectura) --}}
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Subtotal (auto)</label>
+                <input type="text" value="{{ number_format($subtotal, 2) }}"
+                       class="mt-1 w-full rounded-md border-gray-300 bg-gray-100 text-gray-700"
+                       readonly>
+                <p class="mt-1 text-xs text-gray-500">Suma de cantidades × precio unitario.</p>
+            </div>
+
+            {{-- Total final (editable) --}}
+            <div>
+                <label for="total" class="block text-sm font-medium text-gray-700">Total final *</label>
+                <input id="total" type="number" step="0.01" min="0"
+                       wire:key="total-input-{{ $totals_refresh }}"   {{-- 👈 opcional pero ayuda --}}
+                       wire:model.lazy="total"                        {{-- 👈 evita “pegarse” al DOM --}}
+                       class="mt-1 w-full rounded-md border-gray-300 focus:border-[#003844] focus:ring-[#003844]">
+                @error('total') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+
+            </div>
+
+            {{-- Anticipo + Restante --}}
+            <div>
+                <label for="anticipo" class="block text-sm font-medium text-gray-700">Anticipo</label>
+                <input id="anticipo" type="number" step="0.01" min="0"
+                       wire:model.lazy="anticipo"
+                       class="mt-1 w-full rounded-md border-gray-300 focus:border-[#003844] focus:ring-[#003844]">
+                @error('anticipo') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
+
+                <div class="mt-2">
+                    <label class="block text-xs font-medium text-gray-700">Restante (auto)</label>
+                    <input type="text"
+                           value="{{ number_format(($this->restante ?? 0), 2) }}"
+                           class="mt-1 w-full rounded-md border-gray-300 bg-gray-100 text-gray-700"
+                           readonly>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
     {{-- Botones --}}
     <div class="flex justify-end gap-3">
         <a href="{{ route('pedidos') }}"
@@ -744,25 +791,41 @@
                            class="w-full mt-1 border-gray-300 rounded-md shadow-sm">
                 </div>
 
-                {{-- Precio unitario --}}
+                {{-- Precio unitario (bloqueado) --}}
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">Precio unitario</label>
-                    <input type="number" min="0" step="0.01" wire:model.lazy="servicios_pedido.{{ $indice_edicion_servicio }}.precio_unitario"
-                           class="w-full mt-1 border-gray-300 rounded-md shadow-sm">
+                    <input type="number" step="0.01"
+                           class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 text-gray-700"
+                           wire:model="servicios_pedido.{{ $indice_edicion_servicio }}.precio_unitario"
+                           readonly>
+                    <p class="text-xs text-gray-500 mt-1">Precio del catálogo. Usa “Total final” para descuentos/cargos.</p>
+                </div>
+
+                {{-- Subtotal (auto) --}}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Subtotal (auto)</label>
+                    <input type="text"
+                           class="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 text-gray-700"
+                           value="{{ number_format($servicios_pedido[$indice_edicion_servicio]['subtotal'] ?? 0, 2) }}"
+                           readonly>
+                    <p class="text-xs text-gray-500 mt-1">Cantidad × Precio unitario.</p>
                 </div>
 
                 {{-- Total final y justificación --}}
                 <div class="mb-4">
                     <label class="block text-sm font-medium text-gray-700">Total final (opcional)</label>
-                    <input type="number" step="0.01" wire:model.lazy="servicios_pedido.{{ $indice_edicion_servicio }}.total_final"
+                    <input type="number" step="0.01" wire:model.lazy="modal_total_final"
                            class="w-full mt-1 border-gray-300 rounded-md shadow-sm">
                 </div>
 
-                @if (!empty($servicios_pedido[$indice_edicion_servicio]['total_final']))
+                @if (!is_null($modal_total_final) && $modal_total_final !== '')
                     <div class="mb-4">
                         <label class="block text-sm font-medium text-gray-700">Justificación del total</label>
-                        <textarea wire:model.lazy="servicios_pedido.{{ $indice_edicion_servicio }}.justificacion_total"
+                        <textarea wire:model.lazy="modal_justificacion_total"
                                   class="w-full mt-1 border-gray-300 rounded-md shadow-sm"></textarea>
+                        @error('modal_justificacion_total')
+                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        @enderror
                     </div>
                 @endif
 
