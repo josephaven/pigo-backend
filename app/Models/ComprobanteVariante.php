@@ -9,7 +9,19 @@ class ComprobanteVariante extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['pedido_servicio_variante_id', 'tipo', 'url'];
+    protected $table = 'comprobantes_variante';
+
+    protected $fillable = [
+        'pedido_servicio_variante_id',
+        'tipo',
+        'url',            // legacy
+        'disk',
+        'path',
+        'original_name',
+        'mime',
+        'size',
+        'checksum',
+    ];
 
     public function variante() {
         return $this->belongsTo(PedidoServicioVariante::class, 'pedido_servicio_variante_id');
