@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DescargaComprobanteController;
 use App\Http\Controllers\SucursalActivaController;
 use App\Livewire\Clientes;
 use App\Livewire\Configuracion\Empleados;
@@ -62,6 +63,11 @@ Route::middleware([
     Route::get('/pedidos/{id}/editar', NuevoPedido::class)->name('pedidos.editar');
 
 
+    // routes/web.php
+    Route::get('/descargas/pedido/{comprobante}',  [DescargaComprobanteController::class, 'pedido'])
+        ->name('docs.pedido.descargar');
 
+    Route::get('/descargas/variante/{comprobante}', [DescargaComprobanteController::class, 'variante'])
+        ->name('docs.variante.descargar');
     // Aquí puedes agregar otras rutas por módulo en el futuro...
 });
