@@ -20,6 +20,9 @@ use App\Models\PedidoServicioVariante;
 use App\Models\PedidoInsumo;
 use App\Models\RespuestaCampoPedido;
 use Illuminate\Validation\Validator;
+use App\Services\DocumentoService;
+use App\Models\ComprobantePedido;
+use App\Models\ComprobanteVariante;
 
 
 
@@ -123,6 +126,16 @@ class NuevoPedido extends Component
 
     public int $totals_refresh = 0;
 
+    public $comprobantes_pedido = [];
+
+    public bool $aplicar_a_todas = false;
+
+    public bool $total_tocado_manualmente = false;
+
+    public $docvar_actual = null;
+    public $archivo_comprobante = null;   // ⬅️ solo comprobantes del pedido
+
+    public $archivo_diseno_masivo = null; // ⬅️ DISEÑO para aplicar a TODAS las variantes de un servicio
 
 
 
@@ -138,6 +151,8 @@ class NuevoPedido extends Component
             $this->modo_edicion = true;
             $this->cargarPedido($id);
         }
+        $this->refrescarComprobantes();
+
     }
 
     public function render()
@@ -185,6 +200,7 @@ class NuevoPedido extends Component
             ]);
         }
 
+
         return $rules;
     }
 
@@ -215,6 +231,17 @@ class NuevoPedido extends Component
             'rfc.required' => 'El RFC es obligatorio.',
             'razon_social.required' => 'La razón social es obligatoria.',
             'direccion_fiscal.required' => 'La dirección fiscal es obligatoria.',
+
+
+            // opcional:
+            'archivo_comprobante.max'   => 'Máx 100 MB.',
+            'archivo_comprobante.mimetypes' => 'Solo PDF o CDR.',
+            'archivo_diseno.max'        => 'Máx 100 MB.',
+            'archivo_diseno.mimetypes'  => 'Solo PDF o CDR.',
+            'archivo_diseno_masivo.max' => 'Máx 100 MB.',
+            'archivo_diseno_masivo.mimetypes' => 'Solo PDF o CDR.',
+
+
         ];
     }
 
@@ -438,6 +465,7 @@ class NuevoPedido extends Component
             })->values()->toArray();
 
             return [
+                'psv_id'                => $row->id,
                 'tipo'                  => $esPersonalizado ? 'personalizado' : 'catalogo',
                 'servicio_id'           => $row->servicio_id,   // null si es personalizado
                 'nombre'                => $nombre,
@@ -463,6 +491,8 @@ class NuevoPedido extends Component
         $this->usar_campos_personalizados = false;
 
         $this->total_tocado_manualmente = true;
+        $this->refrescarComprobantes();
+
     }
 
 
@@ -493,7 +523,6 @@ class NuevoPedido extends Component
             $this->dispatch('toast', 'Cliente nuevo registrado correctamente');
         }
 
-        // Persistencia
         DB::transaction(function () {
             $data = [
                 'cliente_id'              => $this->cliente_id,
@@ -507,6 +536,8 @@ class NuevoPedido extends Component
                 'metodo_pago_id'          => $this->metodo_pago_id,
                 'user_id'                 => Auth::id(),
             ];
+
+            $docs = app(\App\Services\DocumentoService::class); // 👈 lo usamos en ambos flujos
 
             if ($this->modo_edicion && $this->pedido_id) {
                 $pedido = Pedido::with('variantes.insumos','variantes.respuestasCampos')->findOrFail($this->pedido_id);
@@ -533,6 +564,11 @@ class NuevoPedido extends Component
                         'nota_disenio'         => $servicio['archivo_diseno_nombre'] ?? null,
                         'estado'               => 'en_espera',
                     ]);
+
+                    // 👇 SUBE ARCHIVO PENDIENTE DE ESA FILA (si llegó desde el modal)
+                    if (!empty($servicio['archivo_diseno']) && $servicio['archivo_diseno'] instanceof \Illuminate\Http\UploadedFile) {
+                        $docs->subirParaVariante($variante->id, 'archivo_diseno', $servicio['archivo_diseno']);
+                    }
 
                     foreach (($servicio['insumos_usados'] ?? []) as $ins) {
                         $insumoId = $ins['insumo_id'] ?? $ins['id'] ?? null;
@@ -586,6 +622,7 @@ class NuevoPedido extends Component
             // Creación
             $pedido = Pedido::create($data);
             $this->pedido_id = $pedido->id;
+            $this->refrescarComprobantes();
 
             foreach ($this->servicios_pedido as $servicio) {
                 $variante = PedidoServicioVariante::create([
@@ -602,6 +639,11 @@ class NuevoPedido extends Component
                     'nota_disenio'         => $servicio['archivo_diseno_nombre'] ?? null,
                     'estado'               => 'en_espera',
                 ]);
+
+                // 👇 SUBE ARCHIVO PENDIENTE DE ESA FILA (si llegó desde el modal)
+                if (!empty($servicio['archivo_diseno']) && $servicio['archivo_diseno'] instanceof \Illuminate\Http\UploadedFile) {
+                    $docs->subirParaVariante($variante->id, 'archivo_diseno', $servicio['archivo_diseno']);
+                }
 
                 foreach (($servicio['insumos_usados'] ?? []) as $ins) {
                     $insumoId = $ins['insumo_id'] ?? $ins['id'] ?? null;
@@ -648,6 +690,7 @@ class NuevoPedido extends Component
         session()->flash('mensaje', $this->modo_edicion ? 'Pedido actualizado correctamente' : 'Pedido creado correctamente');
         return redirect()->route('pedidos');
     }
+
 
 
 
@@ -927,7 +970,15 @@ class NuevoPedido extends Component
             $this->insumos_agregados = $servicio['insumos_usados'] ?? [];
             // Importante: NO tocar $this->servicio_personalizado aquí.
         }
+        $psvId = $servicio['psv_id'] ?? null;
+        $this->docvar_actual = null;
 
+        if ($psvId) {
+            $this->docvar_actual = ComprobanteVariante::where('pedido_servicio_variante_id', $psvId)
+                ->where('tipo', 'archivo_diseno')
+                ->latest('id')
+                ->first();
+        }
         // 4) Abrir modal
         $this->modal_servicio_abierto = true;
     }
@@ -947,6 +998,7 @@ class NuevoPedido extends Component
 
         $this->modal_total_final         = null;
         $this->modal_justificacion_total = null;
+        $this->aplicar_a_todas = false;
     }
 
     public function abrirModalServicio($index)
@@ -977,30 +1029,29 @@ class NuevoPedido extends Component
     {
         if ($this->indice_edicion_servicio === null) return;
 
+        // Solo PDF/CDR, 100 MB (igual que en tu guardar())
         $this->validate([
-            'archivo_diseno' => 'nullable|file|max:102400|mimes:jpg,jpeg,png,pdf,ai,svg,eps',
+            'archivo_diseno' => 'nullable|file|max:102400|mimetypes:application/pdf,application/vnd.corel-draw,application/octet-stream',
         ]);
 
+        // Fila actual
         $servicio = &$this->servicios_pedido[$this->indice_edicion_servicio];
 
-        // Derivar el tipo de la fila (no del toggle)
+        // Tipo derivado
         $tipo = $servicio['tipo'] ?? (is_null($servicio['servicio_id']) ? 'personalizado' : 'catalogo');
 
-        // Normaliza y recalcula subtotal
+        // Normaliza cantidad y subtotal
         $cantidad = (int) max(1, (int)($servicio['cantidad'] ?? 1));
-        $precio_unitario = (float) ($servicio['precio_unitario'] ?? 0);
+        $precio   = (float) ($servicio['precio_unitario'] ?? 0);
         $servicio['cantidad']        = $cantidad;
-        $servicio['precio_unitario'] = $precio_unitario;
-        $servicio['subtotal']        = round($cantidad * $precio_unitario, 2);
+        $servicio['precio_unitario'] = $precio;
+        $servicio['subtotal']        = round($cantidad * $precio, 2);
 
-        // ✅ Manejo de override (Total final) desde el modal
-        // - Si el modal tiene un valor, lo aplicamos.
-        // - Si es vacío o igual al subtotal, limpiamos override y justificación.
+        // Override de total final + justificación
         $tf = $this->modal_total_final;
         $tf = ($tf === '' || $tf === null) ? null : round((float)$tf, 2);
 
         if ($tf !== null && $tf !== $servicio['subtotal']) {
-            // Si el override difiere del subtotal, pide justificación (en el modal)
             if (trim((string)$this->modal_justificacion_total) === '') {
                 $this->addError('modal_justificacion_total', 'Explica por qué el total final difiere del subtotal.');
                 return;
@@ -1008,18 +1059,69 @@ class NuevoPedido extends Component
             $servicio['total_final']         = $tf;
             $servicio['justificacion_total'] = $this->modal_justificacion_total;
         } else {
-            // Sin diferencia → no hay override
             $servicio['total_final']         = null;
             $servicio['justificacion_total'] = null;
         }
 
-        // Guardar campos personalizados (valores)
+        // Guardar valores de campos personalizados del modal
         $servicio['campos_personalizados'] = $this->campos_personalizados;
 
-        // Archivo
+        // === Archivo del modal ===
         if ($this->archivo_diseno) {
-            $servicio['archivo_diseno'] = $this->archivo_diseno;
+            $servicio['archivo_diseno']        = $this->archivo_diseno;
             $servicio['archivo_diseno_nombre'] = $this->archivo_diseno->getClientOriginalName();
+
+            // Subida inmediata solo si ya existe en BD (modo edición + psv_id)
+            if ($this->modo_edicion && !empty($servicio['psv_id'])) {
+                try {
+                    $docs = app(\App\Services\DocumentoService::class);
+
+                    // ¿Aplicar a todas las variantes del mismo servicio?
+                    if (!empty($servicio['servicio_id']) && $this->aplicar_a_todas) {
+                        // 1) Subir una vez y obtener meta
+                        $meta = $docs->subirYDevolverMeta(
+                            $this->archivo_diseno,
+                            "servicios/{$this->pedido_id}/{$servicio['servicio_id']}"
+                        );
+
+                        // 2) Obtener todas las variantes de ese servicio en este pedido
+                        $psvIds = \App\Models\PedidoServicioVariante::where('pedido_id', $this->pedido_id)
+                            ->where('servicio_id', $servicio['servicio_id'])
+                            ->pluck('id')
+                            ->all();
+
+                        if (!empty($psvIds)) {
+                            // 3) Crear un registro por variante reutilizando la misma meta
+                            $docs->crearRegistrosVarianteDesdeMeta($psvIds, 'archivo_diseno', $meta);
+
+                            // (Opcional) actualizar nombre visible en todas
+                            \App\Models\PedidoServicioVariante::whereIn('id', $psvIds)
+                                ->update(['nota_disenio' => $servicio['archivo_diseno_nombre']]);
+
+                            $this->dispatch('toast', ['type' => 'success', 'msg' => 'Diseño aplicado a todas las variantes.']);
+                        } else {
+                            $this->dispatch('toast', ['type' => 'warning', 'msg' => 'No hay variantes para este servicio en el pedido.']);
+                        }
+                    } else {
+                        // Sólo esta variante
+                        $docs->subirParaVariante((int)$servicio['psv_id'], 'archivo_diseno', $this->archivo_diseno);
+
+                        // (Opcional) nombre visible en esta variante
+                        \App\Models\PedidoServicioVariante::whereKey($servicio['psv_id'])
+                            ->update(['nota_disenio' => $servicio['archivo_diseno_nombre']]);
+
+                        $this->dispatch('toast', ['type' => 'success', 'msg' => 'Diseño subido a la variante.']);
+                    }
+
+                    // Limpieza del file temporal del input y del check
+                    $this->archivo_diseno   = null;
+                    $this->aplicar_a_todas  = false;
+
+                } catch (\Throwable $e) {
+                    $this->addError('archivo_diseno', 'No se pudo subir el archivo. Intenta nuevamente.');
+                    return;
+                }
+            }
         }
 
         // Insumos según tipo
@@ -1038,13 +1140,13 @@ class NuevoPedido extends Component
             foreach ($this->insumos_con_variantes as $insumo) {
                 if (!empty($insumo['variantes_seleccionadas']) && is_array($insumo['variantes_seleccionadas'])) {
                     foreach ($insumo['variantes_seleccionadas'] as $variante_id) {
-                        $variante = VarianteInsumo::find($variante_id);
+                        $variante = \App\Models\VarianteInsumo::find($variante_id);
                         if ($variante) {
                             $insumos_usados[] = [
-                                'insumo_id'  => $insumo['id'],
-                                'nombre'     => $insumo['nombre'],
-                                'variante_id'=> $variante->id,
-                                'atributos'  => is_string($variante->atributos)
+                                'insumo_id'   => $insumo['id'],
+                                'nombre'      => $insumo['nombre'],
+                                'variante_id' => $variante->id,
+                                'atributos'   => is_string($variante->atributos)
                                     ? json_decode($variante->atributos, true)
                                     : $variante->atributos,
                             ];
@@ -1055,13 +1157,13 @@ class NuevoPedido extends Component
             $servicio['insumos_usados'] = $insumos_usados;
         }
 
-        // Cerrar modal y limpiar
+        // Cierra modal, limpia helpers y recalcula totales
         $this->resetServicio();
-
-        // 🔁 Recalcular resumen y sincronizar total si el usuario no lo tocó
         $this->recalcularTotal();
         $this->totals_refresh++;
     }
+
+
 
 
 
@@ -1435,13 +1537,132 @@ class NuevoPedido extends Component
     }
 
 
+    private function refrescarComprobantes(): void
+    {
+        if ($this->pedido_id) {
+            $this->comprobantes_pedido = ComprobantePedido::where('pedido_id', $this->pedido_id)
+                ->latest()
+                ->get();
+        } else {
+            $this->comprobantes_pedido = [];
+        }
+    }
+
+    public function subirComprobantePedido(): void
+    {
+        if (!$this->pedido_id) {
+            $this->dispatch('toast', ['type' => 'warning', 'msg' => 'Primero guarda el pedido para adjuntar archivos.']);
+            return;
+        }
+
+        $this->validate([
+            'archivo_comprobante' => 'required|file|max:102400|mimetypes:application/pdf,application/vnd.corel-draw,application/octet-stream',
+        ]);
+
+        $docs = app(DocumentoService::class);
+        $docs->subirParaPedido($this->pedido_id, 'comprobante_pago', $this->archivo_comprobante);
+
+        $this->reset('archivo_comprobante');
+        $this->refrescarComprobantes();
+        $this->dispatch('toast', ['type' => 'success', 'msg' => 'Comprobante subido correctamente.']);
+    }
 
 
+    public function subirDisenoVariante(int $psvId): void
+    {
+        $this->validate([
+            'archivo_diseno' => 'required|file|max:102400|mimetypes:application/pdf,application/vnd.corel-draw,application/octet-stream',
+        ]);
+
+        $docs = app(\App\Services\DocumentoService::class);
+        $docs->subirParaVariante($psvId, 'archivo_diseno', $this->archivo_diseno);
+
+        $this->reset('archivo_diseno');
+        $this->dispatch('toast', ['type' => 'success', 'msg' => 'Diseño subido correctamente a la variante.']);
+
+    }
 
 
+    public function subirDisenoParaServicio(int $servicioId): void
+    {
+        if (!$this->pedido_id) {
+            $this->dispatch('toast', ['type' => 'warning', 'msg' => 'Primero guarda el pedido para adjuntar archivos.']);
+            return;
+        }
+
+        $this->validate([
+            'archivo_diseno_masivo' => 'required|file|max:102400|mimetypes:application/pdf,application/vnd.corel-draw,application/octet-stream',
+        ]);
+
+        $docs = app(\App\Services\DocumentoService::class);
+        $meta = $docs->subirYDevolverMeta($this->archivo_diseno_masivo, "servicios/{$this->pedido_id}/{$servicioId}");
+
+        $psvIds = \App\Models\PedidoServicioVariante::where('pedido_id', $this->pedido_id)
+            ->where('servicio_id', $servicioId)
+            ->pluck('id')
+            ->all();
+
+        if (empty($psvIds)) {
+            $this->dispatch('toast', ['type'=>'warning','msg'=>'No hay variantes para este servicio en el pedido.']);
+            return;
+        }
+
+        $docs->crearRegistrosVarianteDesdeMeta($psvIds, 'archivo_diseno', $meta);
+
+        $this->reset('archivo_diseno_masivo');
+        $this->dispatch('toast', ['type' => 'success', 'msg' => 'Diseño aplicado a todas las variantes del servicio.']);
+
+    }
+
+
+// Descarga un comprobante del pedido por ID del registro
+    public function descargarComprobantePedido(int $comprobanteId): void
+    {
+        $comp = ComprobantePedido::find($comprobanteId);
+        if (!$comp) {
+            $this->dispatch('toast', ['type' => 'error', 'msg' => 'Archivo no encontrado.']);
+            return;
+        }
+
+        $url = app(\App\Services\DocumentoService::class)->urlDescarga(
+            $comp->disk,
+            $comp->path,
+            $comp->original_name,
+            $comp->mime,
+            10 // minutos
+        );
+
+        $this->dispatch('abrir-url', url: $url);
+    }
+
+// Descarga el último “archivo de diseño” de una variante (para el modal de edición)
+    public function descargarDisenoDeVariante(int $psvId): void
+    {
+        $comp = \App\Models\ComprobanteVariante::where('pedido_servicio_variante_id', $psvId)
+            ->where('tipo', 'archivo_diseno')
+            ->latest('id')
+            ->first();
+
+        if (!$comp) {
+            $this->dispatch('toast', ['type' => 'warning', 'msg' => 'Esta variante no tiene archivo de diseño.']);
+            return;
+        }
+
+        $url = app(\App\Services\DocumentoService::class)->urlDescarga(
+            $comp->disk,
+            $comp->path,
+            $comp->original_name,
+            $comp->mime,
+            10
+        );
+
+        $this->dispatch('abrir-url', url: $url);
+    }
 
 
 
 
 
 }
+
+

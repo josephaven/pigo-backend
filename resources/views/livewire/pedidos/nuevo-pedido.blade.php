@@ -708,12 +708,11 @@
         <div class="bg-white rounded-lg shadow p-6 space-y-6 border border-gray-200">
             <h2 class="text-lg font-semibold text-gray-800">Resumen de pago</h2>
 
-            {{-- Subtotal (sólo lectura) --}}
+            {{-- Subtotal (solo lectura) --}}
             <div>
                 <label class="block text-sm font-medium text-gray-700">Subtotal (auto)</label>
                 <input type="text" value="{{ number_format($subtotal, 2) }}"
-                       class="mt-1 w-full rounded-md border-gray-300 bg-gray-100 text-gray-700"
-                       readonly>
+                       class="mt-1 w-full rounded-md border-gray-300 bg-gray-100 text-gray-700" readonly>
                 <p class="mt-1 text-xs text-gray-500">Suma de cantidades × precio unitario.</p>
             </div>
 
@@ -721,11 +720,10 @@
             <div>
                 <label for="total" class="block text-sm font-medium text-gray-700">Total final *</label>
                 <input id="total" type="number" step="0.01" min="0"
-                       wire:key="total-input-{{ $totals_refresh }}"   {{-- 👈 opcional pero ayuda --}}
-                       wire:model.lazy="total"                        {{-- 👈 evita “pegarse” al DOM --}}
+                       wire:key="total-input-{{ $totals_refresh }}"
+                       wire:model.lazy="total"
                        class="mt-1 w-full rounded-md border-gray-300 focus:border-[#003844] focus:ring-[#003844]">
                 @error('total') <span class="text-red-600 text-sm">{{ $message }}</span> @enderror
-
             </div>
 
             {{-- Anticipo + Restante --}}
@@ -738,14 +736,119 @@
 
                 <div class="mt-2">
                     <label class="block text-xs font-medium text-gray-700">Restante (auto)</label>
-                    <input type="text"
-                           value="{{ number_format(($this->restante ?? 0), 2) }}"
-                           class="mt-1 w-full rounded-md border-gray-300 bg-gray-100 text-gray-700"
-                           readonly>
+                    <input type="text" value="{{ number_format(($this->restante ?? 0), 2) }}"
+                           class="mt-1 w-full rounded-md border-gray-300 bg-gray-100 text-gray-700" readonly>
                 </div>
             </div>
+
+            {{-- === Comprobante de pago === --}}
+            <div class="pt-2">
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-medium text-slate-800 text-sm sm:text-base">Comprobante de pago</h4>
+                        <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+        PDF / CDR • máx 100MB
+      </span>
+                    </div>
+
+                    {{-- Lista de comprobantes ya guardados --}}
+                    @if (!empty($comprobantes_pedido) && $comprobantes_pedido->count())
+                        <div class="mt-3 space-y-1">
+                            @foreach ($comprobantes_pedido as $c)
+                                <div class="flex items-center justify-between gap-3 text-sm">
+            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12l2 2 4-4M7 12a5 5 0 1010 0 5 5 0 00-10 0z"/>
+              </svg>
+              {{ $c->original_name }}
+            </span>
+
+                                    <div class="flex items-center gap-3">
+                                        <a href="{{ route('docs.pedido.descargar', $c->id) }}"
+                                           target="_blank"
+                                           class="text-blue-600 hover:text-blue-700 text-xs underline">
+                                            Descargar
+                                        </a>
+                                        {{-- (Opcional) eliminar si tienes método: wire:click="eliminarComprobante({{ $c->id }})" --}}
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    {{-- Zona de carga: drag/click + botón subir --}}
+                    <div class="mt-4">
+                        <label for="comprobante_pago_input" class="block">
+                            <div class="rounded-xl border-2 border-dashed border-slate-300 hover:border-slate-400 bg-white text-center px-4 py-8 cursor-pointer transition">
+                                <div class="mx-auto w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0l-3.5 3.5M12 4l3.5 3.5"/>
+                                    </svg>
+                                </div>
+                                <p class="mt-3 text-sm text-slate-700">
+                                    Arrastra y suelta el archivo aquí o
+                                    <span class="text-blue-700 underline">haz clic para buscar</span>
+                                </p>
+                                <p class="text-xs text-slate-500 mt-1">Acepta .pdf y .cdr</p>
+                            </div>
+                        </label>
+
+                        {{-- ⬇️ PROPIEDAD CORRECTA --}}
+                        <input
+                            id="comprobante_pago_input"
+                            type="file"
+                            wire:model="archivo_comprobante"
+                            accept=".pdf,.cdr,application/pdf,application/vnd.corel-draw"
+                            class="hidden"
+                        />
+
+                        {{-- Estado de selección + acciones --}}
+                        @if ($archivo_comprobante)
+                            <div class="mt-3 flex flex-wrap items-center gap-3">
+          <span class="inline-flex items-center gap-2 text-xs sm:text-sm bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16l4 4m0 0l4-4m-4 4V4"/>
+            </svg>
+            {{ $archivo_comprobante->getClientOriginalName() }}
+          </span>
+
+                                <button type="button"
+                                        wire:click="subirComprobantePedido"
+                                        class="px-3 py-1.5 rounded-lg text-white bg-[#003844] hover:bg-[#002f39] text-xs">
+                                    Subir comprobante
+                                </button>
+
+                                <button type="button"
+                                        wire:click="$set('archivo_comprobante', null)"
+                                        class="text-red-600 hover:text-red-700 text-xs underline">
+                                    Quitar
+                                </button>
+                            </div>
+                        @endif
+
+                        {{-- Progreso de carga --}}
+                        <div wire:loading wire:target="archivo_comprobante" class="mt-3">
+                            <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div class="h-2 bg-slate-700 animate-pulse" style="width: 60%"></div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Subiendo…</p>
+                        </div>
+
+                        {{-- Errores del comprobante --}}
+                        @error('archivo_comprobante')
+                        <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+            </div>
+
+
         </div>
     </div>
+
 
 
 
@@ -830,34 +933,137 @@
                 @endif
 
                 {{-- Archivo de diseño --}}
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Archivo de diseño (opcional)</label>
-
-                    @if ($archivo_diseno)
-                        <div class="flex items-center gap-2 mt-2">
-                        <span class="text-sm text-green-700">
-                            Archivo seleccionado: <strong>{{ $archivo_diseno->getClientOriginalName() }}</strong>
-                        </span>
-                            <button type="button" wire:click="eliminarArchivo"
-                                    class="text-red-600 text-xs hover:underline">Eliminar</button>
+                {{-- Archivo de diseño --}}
+                <div class="mb-6">
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5">
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-slate-800 text-sm sm:text-base">Archivo de diseño</h4>
+                            <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+        PDF / CDR • máx 100MB
+      </span>
                         </div>
-                    @elseif ($archivo_diseno_nombre)
-                        <div class="flex items-center gap-2 mt-2">
-                        <span class="text-sm text-green-700">
-                            Archivo previamente guardado: <strong>{{ $archivo_diseno_nombre }}</strong>
-                        </span>
-                            <button type="button" wire:click="eliminarArchivo"
-                                    class="text-red-600 text-xs hover:underline">Eliminar</button>
+
+                        {{-- Estado actual --}}
+                        <div class="mt-3 space-y-2">
+                            @if ($archivo_diseno)
+                                {{-- Seleccionado (aún no guardado) --}}
+                                <div class="flex flex-wrap items-center gap-2">
+          <span class="inline-flex items-center gap-2 text-xs sm:text-sm bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4 4m0 0l4-4m-4 4V4" />
+            </svg>
+            {{ $archivo_diseno->getClientOriginalName() }}
+          </span>
+
+                                    <button type="button" wire:click="eliminarArchivo"
+                                            class="text-red-600 hover:text-red-700 text-xs underline">
+                                        Quitar
+                                    </button>
+                                </div>
+
+                            @elseif (!empty($docvar_actual))
+                                {{-- Guardado en BD (variante) --}}
+                                <div class="flex flex-wrap items-center gap-3">
+          <span class="inline-flex items-center gap-2 text-xs sm:text-sm bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4M7 12a5 5 0 1010 0 5 5 0 00-10 0z"/>
+            </svg>
+            {{ $docvar_actual->original_name ?? ($archivo_diseno_nombre ?? 'archivo') }}
+          </span>
+
+                                    <a href="{{ route('docs.variante.descargar', $docvar_actual->id) }}"
+                                       target="_blank"
+                                       class="text-blue-600 hover:text-blue-700 text-xs underline">
+                                        Descargar
+                                    </a>
+
+                                    <label for="archivo_diseno_input"
+                                           class="text-slate-700 hover:text-slate-900 text-xs underline cursor-pointer">
+                                        Reemplazar
+                                    </label>
+
+                                    <button type="button" wire:click="eliminarArchivo"
+                                            class="text-red-600 hover:text-red-700 text-xs underline">
+                                        Quitar
+                                    </button>
+                                </div>
+
+                            @elseif (!empty($archivo_diseno_nombre))
+                                {{-- Nombre previo (pedido aún no guardado / sin psv) --}}
+                                <div class="flex flex-wrap items-center gap-2">
+          <span class="inline-flex items-center gap-2 text-xs sm:text-sm bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full border border-amber-200">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 4v16m8-8H4"/>
+            </svg>
+            {{ $archivo_diseno_nombre }}
+          </span>
+
+                                    <label for="archivo_diseno_input"
+                                           class="text-slate-700 hover:text-slate-900 text-xs underline cursor-pointer">
+                                        Subir ahora
+                                    </label>
+
+                                    <button type="button" wire:click="eliminarArchivo"
+                                            class="text-red-600 hover:text-red-700 text-xs underline">
+                                        Quitar
+                                    </button>
+                                </div>
+                            @endif
                         </div>
-                    @endif
 
-                    <input type="file" wire:model="archivo_diseno"
-                           class="mt-2 block w-full text-sm text-gray-900 border border-gray-300 rounded cursor-pointer bg-white" />
+                        {{-- Zona de carga: drop/selección --}}
+                        <label for="archivo_diseno_input"
+                               class="mt-4 block w-full">
+                            <div class="w-full rounded-xl border-2 border-dashed border-slate-300 hover:border-slate-400 bg-white text-center px-4 py-8 transition cursor-pointer">
+                                <div class="mx-auto w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-slate-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 12V4m0 0l-3.5 3.5M12 4l3.5 3.5"/>
+                                    </svg>
+                                </div>
+                                <p class="mt-3 text-sm text-slate-700">
+                                    Arrastra y suelta el archivo aquí o
+                                    <span class="text-blue-700 underline">haz clic para buscar</span>
+                                </p>
+                                <p class="text-xs text-slate-500 mt-1">Acepta .pdf y .cdr</p>
+                            </div>
+                        </label>
 
-                    @error('archivo_diseno')
-                    <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
-                    @enderror
+                        <input id="archivo_diseno_input" type="file" wire:model="archivo_diseno" class="hidden" />
+
+                        {{-- Progreso de carga Livewire --}}
+                        <div wire:loading wire:target="archivo_diseno" class="mt-3">
+                            <div class="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+                                <div class="h-2 bg-slate-700 animate-pulse" style="width: 60%"></div>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-1">Subiendo…</p>
+                        </div>
+
+                        @error('archivo_diseno')
+                        <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
+                        @enderror
+
+                        {{-- Aplicar a todas las variantes --}}
+                        @if (!empty($servicios_pedido[$indice_edicion_servicio]['servicio_id'] ?? null))
+                            <div class="mt-4 border-t border-slate-200 pt-4">
+                                <label class="flex items-start gap-3 text-sm text-slate-700">
+                                    <input type="checkbox" wire:model.defer="aplicar_a_todas"
+                                           class="mt-0.5 rounded border-slate-300">
+                                    <span>
+            Aplicar este archivo a <strong>todas las variantes</strong> de este servicio en el pedido.
+            <span class="block text-xs text-slate-500 mt-0.5">
+              Se adjuntará el mismo documento a cada variante al guardar.
+            </span>
+          </span>
+                                </label>
+                            </div>
+                        @endif
+                    </div>
                 </div>
+
+
 
                 {{-- Campos personalizados --}}
                 <div class="mb-4">
