@@ -84,7 +84,7 @@ class Pedidos extends Component
 
     public function guardarMotivo()
     {
-        $this->validate(['motivo' => 'required|string|min:3']);
+        $this->validate(['motivo' => 'required|string|min:1']);
 
         $this->cambiarEstado($this->variante_id_motivo, $this->nuevo_estado, $this->motivo);
 
