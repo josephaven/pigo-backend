@@ -3,9 +3,7 @@
 namespace App\Livewire\Pedidos;
 
 use App\Models\Pedido;
-use App\Models\Sucursal;
 use Livewire\Component;
-use Illuminate\Support\Facades\DB;
 use App\Models\HistorialPedido;
 use Illuminate\Support\Facades\Auth;
 
@@ -21,30 +19,55 @@ class Pedidos extends Component
     public $variante_id_motivo;
     public $nuevo_estado = '';
 
+    // 👂 Se refresca cuando el Dashboard avisa que cambió la sucursal
+    protected $listeners = [
+        'sucursalActualizada' => '$refresh',
+    ];
+
+    // Cambia aquí si quieres filtrar por entrega/elaboración, etc.
+    // Opciones típicas: sucursal_registro_id | sucursal_entrega_id | sucursal_elaboracion_id
+    protected string $campoSucursalFiltro = 'sucursal_registro_id';
+
     public function mount()
     {
         $this->filtroKey = uniqid();
     }
 
+    /** Sucursal activa tomada de sesión o del usuario */
+    public function getSucursalActivaProperty(): int
+    {
+        return (int) (session('sucursal_activa_id') ?? Auth::user()->sucursal_id);
+    }
+
     public function render()
     {
-        $pedidos = Pedido::with(['cliente', 'usuario', 'sucursalEntrega', 'variantes' => fn($q) => $q->orderBy('id')])
-            ->when($this->filtro_folio, fn($q) =>
+        $sid = $this->sucursalActiva;
+
+        $pedidos = Pedido::with([
+            'cliente',
+            'usuario',
+            'sucursalEntrega',
+            'variantes' => fn ($q) => $q->orderBy('id'),
+        ])
+            // ✅ filtro por sucursal activa
+            ->where($this->campoSucursalFiltro, $sid)
+
+            ->when($this->filtro_folio, fn ($q) =>
             $q->where('id', $this->filtro_folio)
             )
-            ->when($this->filtro_cliente, fn($q) =>
-            $q->whereHas('cliente', fn($c) =>
+            ->when($this->filtro_cliente, fn ($q) =>
+            $q->whereHas('cliente', fn ($c) =>
             $c->whereRaw('LOWER(nombre_completo) LIKE ?', ['%' . strtolower($this->filtro_cliente) . '%'])
             )
             )
-            ->when($this->filtro_fecha, fn($q) =>
+            ->when($this->filtro_fecha, fn ($q) =>
             $q->whereDate('fecha_entrega', $this->filtro_fecha)
             )
-            ->when($this->filtro_estado, function ($q) {
-                $q->whereHas('variantes', fn($v) =>
-                $v->where('estado', $this->filtro_estado)
-                );
-            })
+            ->when($this->filtro_estado, fn ($q) =>
+            $q->whereHas('variantes', fn ($v) =>
+            $v->where('estado', $this->filtro_estado)
+            )
+            )
             ->orderByDesc('id')
             ->get();
 
@@ -59,7 +82,7 @@ class Pedidos extends Component
             'filtro_folio',
             'filtro_cliente',
             'filtro_fecha',
-            'filtro_estado'
+            'filtro_estado',
         ]);
 
         $this->filtroKey = uniqid(); // para forzar reinicio visual
@@ -67,7 +90,7 @@ class Pedidos extends Component
 
     public function filtrar()
     {
-        // No es necesario código. Solo fuerza render.
+        // solo re-render
     }
 
     public function actualizarEstado($varianteId, $nuevoEstado)
@@ -92,16 +115,12 @@ class Pedidos extends Component
             'motivo',
             'variante_id_motivo',
             'mostrar_modal_motivo',
-            'nuevo_estado'
+            'nuevo_estado',
         ]);
 
-        // ✅ Toast después de guardar motivo
         $this->js(<<<JS
             window.dispatchEvent(new CustomEvent('toast', {
-                detail: {
-                    tipo: 'success',
-                    mensaje: 'Estado actualizado correctamente con motivo'
-                }
+                detail: { tipo: 'success', mensaje: 'Estado actualizado correctamente con motivo' }
             }));
         JS);
     }
@@ -110,15 +129,11 @@ class Pedidos extends Component
     {
         $variante = \App\Models\PedidoServicioVariante::find($varianteId);
         if (!$variante) {
-            // ❌ Toast de error
             $this->js(<<<JS
-            window.dispatchEvent(new CustomEvent('toast', {
-                detail: {
-                    tipo: 'error',
-                    mensaje: 'No se encontró la variante del servicio'
-                }
-            }));
-        JS);
+                window.dispatchEvent(new CustomEvent('toast', {
+                    detail: { tipo: 'error', mensaje: 'No se encontró la variante del servicio' }
+                }));
+            JS);
             return;
         }
 
@@ -132,18 +147,12 @@ class Pedidos extends Component
             'motivo' => $motivo,
         ]);
 
-        // ✅ Toast de confirmación general
         $this->js(<<<JS
-        window.dispatchEvent(new CustomEvent('toast', {
-            detail: {
-                tipo: 'info',
-                mensaje: 'Estado cambiado a "$nuevoEstado"'
-            }
-        }));
-    JS);
+            window.dispatchEvent(new CustomEvent('toast', {
+                detail: { tipo: 'info', mensaje: 'Estado cambiado a "$nuevoEstado"' }
+            }));
+        JS);
 
-        // 🔁 Forzar refresco visual
         $this->dispatch('$refresh');
     }
-
 }

@@ -178,3 +178,21 @@
     @endif
 
 </div>
+
+@push('scripts')
+    <script>
+        (function () {
+            // evita registrar el listener más de una vez
+            if (window.__bridgeSucursalPedidos) return;
+            window.__bridgeSucursalPedidos = true;
+
+            window.addEventListener('sucursal-cambiada', function () {
+                // avisa a Livewire que refresque el componente de Pedidos
+                Livewire.dispatch('sucursalActualizada');
+                // Si quieres además limpiar filtros en cada cambio de sucursal:
+                // Livewire.dispatch('call', { component: @this.__instance.id, method: 'limpiarFiltros' });
+            });
+        })();
+    </script>
+@endpush
+
