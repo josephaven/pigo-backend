@@ -168,7 +168,6 @@ class NuevoPedido extends Component
     {
         $rules = [
             // Base del pedido
-            'cliente_id'               => ['required','exists:clientes,id'],
             'sucursal_entrega_id'      => ['required','exists:sucursales,id'],
             'sucursal_elaboracion_id'  => ['required','exists:sucursales,id'],
             'fecha_entrega'            => ['required','date','after_or_equal:today'],
@@ -177,6 +176,11 @@ class NuevoPedido extends Component
             'justificacion_precio'     => ['nullable','string','max:500'],
             'metodo_pago_id'           => ['required','exists:metodo_pagos,id'],
         ];
+
+        // ✅ Solo exigir cliente_id cuando NO es cliente nuevo
+        if (!$this->cliente_nuevo) {
+            $rules['cliente_id'] = ['required','exists:clientes,id'];
+        }
 
         // Si requiere factura, valida los campos fiscales
         if ($this->requiere_factura) {
@@ -520,7 +524,7 @@ class NuevoPedido extends Component
             ]);
             $this->cliente_id   = $nuevo->id;
             $this->cliente_nuevo = false;
-            $this->dispatch('toast', 'Cliente nuevo registrado correctamente');
+            $this->toastJs('success', 'Cliente nuevo registrado correctamente');
         }
 
         DB::transaction(function () {
@@ -1098,9 +1102,10 @@ class NuevoPedido extends Component
                             \App\Models\PedidoServicioVariante::whereIn('id', $psvIds)
                                 ->update(['nota_disenio' => $servicio['archivo_diseno_nombre']]);
 
-                            $this->dispatch('toast', ['type' => 'success', 'msg' => 'Diseño aplicado a todas las variantes.']);
+                            $this->toastJs('success', 'Diseño aplicado a todas las variantes.');
+
                         } else {
-                            $this->dispatch('toast', ['type' => 'warning', 'msg' => 'No hay variantes para este servicio en el pedido.']);
+                            $this->toastJs('warning', 'No hay variantes para este servicio en el pedido.');
                         }
                     } else {
                         // Sólo esta variante
@@ -1110,7 +1115,8 @@ class NuevoPedido extends Component
                         \App\Models\PedidoServicioVariante::whereKey($servicio['psv_id'])
                             ->update(['nota_disenio' => $servicio['archivo_diseno_nombre']]);
 
-                        $this->dispatch('toast', ['type' => 'success', 'msg' => 'Diseño subido a la variante.']);
+                        $this->toastJs('success', 'Diseño subido a la variante.');
+
                     }
 
                     // Limpieza del file temporal del input y del check
@@ -1118,7 +1124,7 @@ class NuevoPedido extends Component
                     $this->aplicar_a_todas  = false;
 
                 } catch (\Throwable $e) {
-                    $this->addError('archivo_diseno', 'No se pudo subir el archivo. Intenta nuevamente.');
+                    $this->toastJs('error', 'No se pudo subir el archivo. Intenta nuevamente.');
                     return;
                 }
             }
@@ -1477,7 +1483,8 @@ class NuevoPedido extends Component
 
         if ($this->anticipo > $this->total) {
             $this->anticipo = $this->total;
-            $this->dispatch('toast', type: 'info', message: 'El anticipo no puede ser mayor que el total. Se ajustó automáticamente.');
+            $this->toastJs('info', 'El anticipo no puede ser mayor que el total. Se ajustó automáticamente.');
+
         }
     }
 
@@ -1487,7 +1494,8 @@ class NuevoPedido extends Component
         $this->anticipo = $this->sanearNumero($value);
         if ($this->anticipo > $this->total) {
             $this->anticipo = $this->total;
-            $this->dispatch('toast', type: 'info', message: 'El anticipo no puede ser mayor que el total. Se ajustó automáticamente.');
+            $this->toastJs('info', 'El anticipo no puede ser mayor que el total. Se ajustó automáticamente.');
+
         }
     }
 
@@ -1564,7 +1572,8 @@ class NuevoPedido extends Component
 
         $this->reset('archivo_comprobante');
         $this->refrescarComprobantes();
-        $this->dispatch('toast', ['type' => 'success', 'msg' => 'Comprobante subido correctamente.']);
+        $this->toastJs('success', 'Comprobante subido correctamente.');
+
     }
 
 
@@ -1603,14 +1612,16 @@ class NuevoPedido extends Component
             ->all();
 
         if (empty($psvIds)) {
-            $this->dispatch('toast', ['type'=>'warning','msg'=>'No hay variantes para este servicio en el pedido.']);
+            $this->toastJs('warning', 'No hay variantes para este servicio en el pedido.');
+
             return;
         }
 
         $docs->crearRegistrosVarianteDesdeMeta($psvIds, 'archivo_diseno', $meta);
 
         $this->reset('archivo_diseno_masivo');
-        $this->dispatch('toast', ['type' => 'success', 'msg' => 'Diseño aplicado a todas las variantes del servicio.']);
+        $this->toastJs('success', 'Diseño aplicado a todas las variantes del servicio.');
+
 
     }
 
@@ -1620,7 +1631,7 @@ class NuevoPedido extends Component
     {
         $comp = ComprobantePedido::find($comprobanteId);
         if (!$comp) {
-            $this->dispatch('toast', ['type' => 'error', 'msg' => 'Archivo no encontrado.']);
+            $this->toastJs('error', 'Archivo no encontrado.');
             return;
         }
 
@@ -1644,7 +1655,8 @@ class NuevoPedido extends Component
             ->first();
 
         if (!$comp) {
-            $this->dispatch('toast', ['type' => 'warning', 'msg' => 'Esta variante no tiene archivo de diseño.']);
+            $this->toastJs('warning', 'Esta variante no tiene archivo de diseño.');
+
             return;
         }
 
@@ -1657,6 +1669,16 @@ class NuevoPedido extends Component
         );
 
         $this->dispatch('abrir-url', url: $url);
+    }
+
+    private function toastJs(string $tipo, string $mensaje): void
+    {
+        $mensaje = addslashes($mensaje); // por si lleva comillas
+        $this->js(<<<JS
+        window.dispatchEvent(new CustomEvent('toast', {
+            detail: { tipo: '{$tipo}', mensaje: '{$mensaje}' }
+        }));
+    JS);
     }
 
 
