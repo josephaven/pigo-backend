@@ -433,40 +433,64 @@ class NuevoPedido extends Component
         $this->servicios_pedido = collect($pedido->variantes)->map(function ($row) {
             $esPersonalizado = is_null($row->servicio_id);
 
+
+            // Lee atributos (si existen) de la variante
+            $attrs = null;
+            if (!empty($row->atributos)) {
+                $tmp = is_string($row->atributos)
+                    ? json_decode($row->atributos, true)
+                    : $row->atributos;
+
+                if (is_array($tmp)) {
+                    $attrs = $tmp;
+                }
+            }
+
+
             // Nombre visible
             $nombre = $esPersonalizado
                 ? ($row->nombre_personalizado ?? 'Servicio personalizado')
                 : optional($row->servicio)->nombre;
 
-            // Campos personalizados (de respuestas)
-            $campos = collect($row->respuestasCampos ?? [])->map(function ($r) {
-                return [
-                    'id'       => $r->campo_personalizado_id ?? null,     // nombre real
-                    'nombre'   => optional($r->campo)->nombre ?? 'Campo',
-                    'tipo'     => optional($r->campo)->tipo ?? 'texto',
-                    'valor'    => $r->valor ?? null,                      // nombre real
-                    'opciones' => optional($r->campo)->opciones ?? [],
-                ];
-            })->values()->toArray();
+
+            // Campos personalizados:
+            // - Catálogo: desde respuestas
+            // - Personalizado: desde atributos guardados
+            if ($esPersonalizado) {
+                $campos = $attrs['campos_personalizados'] ?? [];
+                $campos_def = $attrs['campos_def'] ?? [];
+            } else {
+                $campos = collect($row->respuestasCampos ?? [])->map(function ($r) {
+                    return [
+                        'id'       => $r->campo_personalizado_id ?? null,
+                        'nombre'   => optional($r->campo)->nombre ?? 'Campo',
+                        'tipo'     => optional($r->campo)->tipo ?? 'texto',
+                        'valor'    => $r->valor ?? null,
+                        'opciones' => optional($r->campo)->opciones ?? [],
+                    ];
+                })->values()->toArray();
+                $campos_def = []; // no aplica para catálogo
+            }
 
             // Insumos usados (de pedido_insumo)
             $insumos = collect($row->insumos ?? [])->map(function ($pi) {
-                $attrs = $pi->atributos ?? null;
-                if (is_string($attrs)) {
-                    $decoded = json_decode($attrs, true);
-                    if (json_last_error() === JSON_ERROR_NONE) $attrs = $decoded;
+                $attrsPi = $pi->atributos ?? null;
+                if (is_string($attrsPi)) {
+                    $decoded = json_decode($attrsPi, true);
+                    if (is_array($decoded)) $attrsPi = $decoded;
                 }
                 return [
-                    'insumo_id'   => $pi->insumo_id ?? null,              // para catálogo
-                    'id'          => $pi->insumo_id ?? null,              // compat con personalizado
+                    'insumo_id'   => $pi->insumo_id ?? null,
+                    'id'          => $pi->insumo_id ?? null,
                     'nombre'      => optional($pi->insumo)->nombre ?? '—',
                     'categoria'   => optional(optional($pi->insumo)->categoria)->nombre ?? '—',
                     'cantidad'    => (float)($pi->cantidad ?? 0),
                     'unidad'      => $pi->unidad ?? (optional($pi->insumo)->unidad_medida ?? ''),
-                    'variante_id' => $pi->variante_id ?? null,            // ya soportado en BD
-                    'atributos'   => $attrs,
+                    'variante_id' => $pi->variante_id ?? null,
+                    'atributos'   => $attrsPi,
                 ];
             })->values()->toArray();
+
 
             return [
                 'psv_id'                => $row->id,
@@ -475,6 +499,7 @@ class NuevoPedido extends Component
                 'nombre'                => $nombre,
                 'descripcion'           => $row->descripcion,
                 'campos_personalizados' => $campos,
+                'campos_def'            => $campos_def,          // 👈 para reconstruir el builder
                 'insumos_usados'        => $insumos,
                 'cantidad'              => (int) $row->cantidad,
                 'precio_unitario'       => (float) $row->precio_unitario,
@@ -554,12 +579,21 @@ class NuevoPedido extends Component
                 }
 
                 foreach ($this->servicios_pedido as $servicio) {
+
+                    $atributos = null;
+                    if (($servicio['tipo'] ?? '') === 'personalizado') {
+                        $atributos = [
+                            'campos_def'            => $servicio['campos_def']            ?? [],
+                            'campos_personalizados' => $servicio['campos_personalizados'] ?? [],
+                        ];
+                    }
+
                     $variante = PedidoServicioVariante::create([
                         'pedido_id'            => $pedido->id,
                         'servicio_id'          => $servicio['servicio_id'],
                         'nombre_personalizado' => ($servicio['tipo'] ?? '') === 'personalizado' ? ($servicio['nombre'] ?? null) : null,
                         'descripcion'          => $servicio['descripcion'] ?? null,
-                        'atributos'            => null,
+                        'atributos'            => $atributos,
                         'cantidad'             => $servicio['cantidad'] ?? 1,
                         'precio_unitario'      => $servicio['precio_unitario'],
                         'subtotal'             => $servicio['subtotal'],
@@ -629,12 +663,21 @@ class NuevoPedido extends Component
             $this->refrescarComprobantes();
 
             foreach ($this->servicios_pedido as $servicio) {
+
+                $atributos = null;
+                if (($servicio['tipo'] ?? '') === 'personalizado') {
+                    $atributos = [
+                        'campos_def'            => $servicio['campos_def']            ?? [],
+                        'campos_personalizados' => $servicio['campos_personalizados'] ?? [],
+                    ];
+                }
+
                 $variante = PedidoServicioVariante::create([
                     'pedido_id'            => $pedido->id,
                     'servicio_id'          => $servicio['servicio_id'],
                     'nombre_personalizado' => ($servicio['tipo'] ?? '') === 'personalizado' ? ($servicio['nombre'] ?? null) : null,
                     'descripcion'          => $servicio['descripcion'] ?? null,
-                    'atributos'            => null,
+                    'atributos'            => $atributos,
                     'cantidad'             => $servicio['cantidad'] ?? 1,
                     'precio_unitario'      => $servicio['precio_unitario'],
                     'subtotal'             => $servicio['subtotal'],
@@ -1587,7 +1630,7 @@ class NuevoPedido extends Component
         $docs->subirParaVariante($psvId, 'archivo_diseno', $this->archivo_diseno);
 
         $this->reset('archivo_diseno');
-        $this->dispatch('toast', ['type' => 'success', 'msg' => 'Diseño subido correctamente a la variante.']);
+        $this->toastJs('success', 'Diseño subido correctamente a la variante.');
 
     }
 
