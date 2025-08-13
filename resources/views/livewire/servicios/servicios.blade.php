@@ -118,3 +118,19 @@
         </table>
     </div>
 </div>
+
+@push('scripts')
+    <script>
+        (function () {
+            if (window.__bridgeSucursalServicios) return;
+            window.__bridgeSucursalServicios = true;
+
+            // El Dashboard emite este evento cuando cambia la sucursal activa
+            window.addEventListener('sucursal-cambiada', function () {
+                // Avisamos a Livewire que refresque este componente
+                Livewire.dispatch('sucursalActualizada');
+            });
+        })();
+    </script>
+@endpush
+
