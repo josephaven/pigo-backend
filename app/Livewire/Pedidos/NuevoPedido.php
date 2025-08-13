@@ -23,6 +23,7 @@ use Illuminate\Validation\Validator;
 use App\Services\DocumentoService;
 use App\Models\ComprobantePedido;
 use App\Models\ComprobanteVariante;
+use Illuminate\Support\Facades\Storage;
 
 
 
@@ -136,6 +137,11 @@ class NuevoPedido extends Component
     public $archivo_comprobante = null;   // ⬅️ solo comprobantes del pedido
 
     public $archivo_diseno_masivo = null; // ⬅️ DISEÑO para aplicar a TODAS las variantes de un servicio
+
+    public ?int $reemplazar_comprobante_id = null; // id del comprobante a reemplazar (opcional)
+
+
+    public ?int $reemplazar_diseno_psv_id = null;
 
 
 
@@ -1235,7 +1241,6 @@ class NuevoPedido extends Component
 
 
 
-
     public function eliminarArchivo()
     {
         $this->archivo_diseno = null;
@@ -1245,6 +1250,9 @@ class NuevoPedido extends Component
             $this->servicios_pedido[$this->indice_edicion_servicio]['archivo_diseno'] = null;
             $this->servicios_pedido[$this->indice_edicion_servicio]['archivo_diseno_nombre'] = null;
         }
+
+        $this->resetErrorBag('archivo_diseno');
+        $this->clearValidation('archivo_diseno');
     }
 
 
@@ -1602,7 +1610,7 @@ class NuevoPedido extends Component
     public function subirComprobantePedido(): void
     {
         if (!$this->pedido_id) {
-            $this->dispatch('toast', ['type' => 'warning', 'msg' => 'Primero guarda el pedido para adjuntar archivos.']);
+            $this->toastJs('warning', 'Primero guarda el pedido para adjuntar archivos.');
             return;
         }
 
@@ -1610,14 +1618,28 @@ class NuevoPedido extends Component
             'archivo_comprobante' => 'required|file|max:102400|mimetypes:application/pdf,application/vnd.corel-draw,application/octet-stream',
         ]);
 
-        $docs = app(DocumentoService::class);
+        // Si es REEMPLAZO, borra el anterior antes de subir el nuevo
+        if ($this->reemplazar_comprobante_id) {
+            $old = ComprobantePedido::find($this->reemplazar_comprobante_id);
+            if ($old) {
+                try {
+                    Storage::disk($old->disk)->delete($old->path);
+                } catch (\Throwable $e) {
+                    // si falla el borrado físico, igual borra el registro para no duplicar
+                }
+                $old->delete();
+            }
+            $this->reemplazar_comprobante_id = null;
+        }
+
+        $docs = app(\App\Services\DocumentoService::class);
         $docs->subirParaPedido($this->pedido_id, 'comprobante_pago', $this->archivo_comprobante);
 
         $this->reset('archivo_comprobante');
         $this->refrescarComprobantes();
         $this->toastJs('success', 'Comprobante subido correctamente.');
-
     }
+
 
 
     public function subirDisenoVariante(int $psvId): void
@@ -1626,13 +1648,33 @@ class NuevoPedido extends Component
             'archivo_diseno' => 'required|file|max:102400|mimetypes:application/pdf,application/vnd.corel-draw,application/octet-stream',
         ]);
 
-        $docs = app(\App\Services\DocumentoService::class);
+        $nombre = $this->archivo_diseno->getClientOriginalName();
+
+        $docs = app(DocumentoService::class);
         $docs->subirParaVariante($psvId, 'archivo_diseno', $this->archivo_diseno);
+
+        // nombre visible en BD
+        PedidoServicioVariante::whereKey($psvId)->update(['nota_disenio' => $nombre]);
+
+        // refrescar chip actual
+        $this->docvar_actual = ComprobanteVariante::where('pedido_servicio_variante_id', $psvId)
+            ->where('tipo', 'archivo_diseno')
+            ->latest('id')
+            ->first();
+
+        // refrescar fila en memoria
+        foreach ($this->servicios_pedido as &$s) {
+            if (!empty($s['psv_id']) && (int)$s['psv_id'] === (int)$psvId) {
+                $s['archivo_diseno_nombre'] = $nombre;
+                break;
+            }
+        }
+        unset($s);
 
         $this->reset('archivo_diseno');
         $this->toastJs('success', 'Diseño subido correctamente a la variante.');
-
     }
+
 
 
     public function subirDisenoParaServicio(int $servicioId): void
@@ -1725,9 +1767,129 @@ class NuevoPedido extends Component
     }
 
 
+    public function prepararReemplazoComprobante(int $comprobanteId): void
+    {
+        $this->reemplazar_comprobante_id = $comprobanteId;
+
+        // abre el input de archivo del dropzone (ajusta el id si usas otro)
+        $this->dispatch('abrir-input-comprobante');
+        $this->toastJs('info', 'Selecciona el archivo para reemplazar el comprobante.');
+    }
 
 
+    public function eliminarComprobantePedido(int $comprobanteId): void
+    {
+        // 1) Lo quitamos de la UI al instante
+        $this->comprobantes_pedido = collect($this->comprobantes_pedido)
+            ->reject(fn ($c) => (int)$c->id === (int)$comprobanteId)
+            ->values();
 
+        // 2) Borrado físico + registro
+        $comp = ComprobantePedido::find($comprobanteId);
+        if (!$comp) {
+            $this->toastJs('error', 'Comprobante no encontrado.');
+            return;
+        }
+
+        try {
+            Storage::disk($comp->disk)->delete($comp->path);
+        } catch (\Throwable $e) {
+            // si falla el borrado de archivo, igual borramos el registro para mantener UI limpia
+        }
+
+        $comp->delete();
+
+        // 3) Refrescar lista desde BD por si hay otros cambios
+        $this->refrescarComprobantes();
+        $this->toastJs('success', 'Comprobante eliminado.');
+    }
+
+
+    public function prepararReemplazoDiseno(int $psvId): void
+    {
+        $this->reemplazar_diseno_psv_id = $psvId;
+        $this->dispatch('abrir-input-diseno'); // el Blade hará click al input oculto
+    }
+
+
+    public function eliminarDisenoDeVariante(int $psvId): void
+    {
+        $comp = ComprobanteVariante::where('pedido_servicio_variante_id', $psvId)
+            ->where('tipo', 'archivo_diseno')
+            ->latest('id')
+            ->first();
+
+        if (!$comp) {
+            $this->toastJs('warning', 'Esta variante no tiene archivo de diseño.');
+            return;
+        }
+
+        try {
+            Storage::disk($comp->disk)->delete($comp->path);
+        } catch (\Throwable $e) {
+            // si falla el borrado físico, de todos modos seguimos
+        }
+
+        $comp->delete();
+
+        // Limpia nombre visible en BD
+        PedidoServicioVariante::whereKey($psvId)->update(['nota_disenio' => null]);
+
+        // Actualiza UI inmediata
+        if ($this->docvar_actual && (int)($this->docvar_actual->pedido_servicio_variante_id) === (int)$psvId) {
+            $this->docvar_actual = null;
+        }
+        foreach ($this->servicios_pedido as &$s) {
+            if (!empty($s['psv_id']) && (int)$s['psv_id'] === (int)$psvId) {
+                $s['archivo_diseno_nombre'] = null;
+                break;
+            }
+        }
+        unset($s);
+
+        $this->toastJs('success', 'Diseño eliminado de la variante.');
+    }
+
+
+    public function updatedArchivoDiseno()
+    {
+        $this->resetErrorBag('archivo_diseno');
+        $this->clearValidation('archivo_diseno');
+    }
+
+    public function eliminarDisenoActual(): void
+    {
+        // Sin índice o sin psv_id → solo limpia UI
+        if ($this->indice_edicion_servicio === null) { $this->eliminarArchivo(); return; }
+
+        $psvId = $this->servicios_pedido[$this->indice_edicion_servicio]['psv_id'] ?? null;
+        if (!$psvId) { $this->eliminarArchivo(); return; }
+
+        $comp = \App\Models\ComprobanteVariante::where('pedido_servicio_variante_id', $psvId)
+            ->where('tipo', 'archivo_diseno')
+            ->latest('id')
+            ->first();
+
+        if ($comp) {
+            try { \Storage::disk($comp->disk)->delete($comp->path); } catch (\Throwable $e) {}
+            $comp->delete();
+        }
+
+        // Limpia nombre visible en la variante
+        \App\Models\PedidoServicioVariante::whereKey($psvId)->update(['nota_disenio' => null]);
+
+        // Refresca estado en UI
+        $this->docvar_actual = null;
+        $this->archivo_diseno = null;
+        $this->archivo_diseno_nombre = null;
+        $this->servicios_pedido[$this->indice_edicion_servicio]['archivo_diseno'] = null;
+        $this->servicios_pedido[$this->indice_edicion_servicio]['archivo_diseno_nombre'] = null;
+
+        $this->resetErrorBag('archivo_diseno');
+        $this->clearValidation('archivo_diseno');
+
+        $this->toastJs('success', 'Archivo de diseño eliminado.');
+    }
 }
 
 
