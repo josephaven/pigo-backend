@@ -52,9 +52,46 @@ class Pedidos extends Component
             // ✅ filtro por sucursal activa
             ->where($this->campoSucursalFiltro, $sid)
 
-            ->when($this->filtro_folio, fn ($q) =>
-            $q->where('id', $this->filtro_folio)
-            )
+            ->when($this->filtro_folio, function ($q) {
+                $t = trim($this->filtro_folio);
+
+                // a) Solo dígitos: buscar por folio_num y por sufijo pad
+                if (ctype_digit($t)) {
+                    $num = (int) $t;
+                    $len = strlen($t);
+
+                    $q->where(function ($qq) use ($num, $t, $len) {
+                        $qq->where('folio_num', $num)
+                            ->orWhereRaw("LPAD(CAST(folio_num AS TEXT), 4, '0') LIKE ?", ["%{$t}"]);
+                    });
+
+                    return;
+                }
+
+                // b) Con guion tipo "CENTR-0012"
+                if (strpos($t, '-') !== false) {
+                    [$cod, $sufijo] = array_pad(explode('-', $t, 2), 2, null);
+                    $cod    = trim($cod ?? '');
+                    $sufijo = trim($sufijo ?? '');
+
+                    $q->whereHas('sucursalRegistro', fn($s) =>
+                    $s->where('codigo', 'ilike', "%{$cod}%")
+                    );
+
+                    if ($sufijo !== '' && ctype_digit($sufijo)) {
+                        $q->whereRaw("LPAD(CAST(folio_num AS TEXT), 4, '0') LIKE ?", ["%{$sufijo}"]);
+                    }
+
+                    return;
+                }
+
+                // c) Letras: buscar por código de sucursal
+                $q->whereHas('sucursalRegistro', fn($s) =>
+                $s->where('codigo', 'ilike', "%{$t}%")
+                );
+            })
+
+
             ->when($this->filtro_cliente, fn ($q) =>
             $q->whereHas('cliente', fn ($c) =>
             $c->whereRaw('LOWER(nombre_completo) LIKE ?', ['%' . strtolower($this->filtro_cliente) . '%'])

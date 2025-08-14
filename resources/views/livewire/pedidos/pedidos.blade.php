@@ -86,7 +86,7 @@
             <tbody>
             @forelse($pedidos as $pedido)
                 <tr class="bg-white shadow-sm rounded" wire:key="pedido-{{ $pedido->id }}">
-                    <td class="px-4 py-2 font-mono">{{ str_pad($pedido->id, 6, '0', STR_PAD_LEFT) }}</td>
+                    <td class="px-4 py-2 ">{{ $pedido->folio }}</td>
                     <td class="px-4 py-2">{{ $pedido->cliente->nombre_completo ?? '-' }}</td>
                     <td class="px-4 py-2 space-y-1">
                         @foreach($pedido->variantes as $variante)
