@@ -13,7 +13,7 @@ class VarianteInsumo extends Model
 
     protected $fillable = [
         'insumo_id',
-        'atributos',
+        'atributos',      // opcional si guardas JSON además de la tabla detalle
         'codigo_interno',
     ];
 
@@ -39,5 +39,15 @@ class VarianteInsumo extends Model
     public function detalleTraslados()
     {
         return $this->hasMany(DetalleTraslado::class, 'variante_insumo_id');
+    }
+
+    /**
+     * 👇 Relación que te falta (la que usa el componente):
+     * variante -> (muchos) atributo_valor
+     */
+    public function atributosValores()
+    {
+        // Ajusta el nombre de la clase y de la tabla si en tu BD se llaman distinto
+        return $this->hasMany(VarianteInsumoAtributoValor::class, 'variante_insumo_id');
     }
 }

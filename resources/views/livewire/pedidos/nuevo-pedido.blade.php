@@ -601,7 +601,10 @@
                         <th class="px-4 py-2">Total final</th>
                         <th class="px-4 py-2">Campos personalizados</th>
                         <th class="px-4 py-2">Insumos usados</th>
-                        <th class="px-4 py-2">Acciones</th>
+                        {{-- header --}}
+                        <th class="px-4 py-2 text-right align-top w-56 md:w-64">Acciones</th>
+
+
                     </tr>
                     </thead>
                     <tbody class="bg-white">
@@ -611,7 +614,20 @@
                             {{-- Servicio --}}
                             <td class="px-4 py-2 font-medium">
                                 {{ $s['nombre'] }}
+                                @if(!empty($s['variante_label']))
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        Variante: {{ $s['variante_label'] }}
+                                    </div>
+                                @endif
+                                @if(!empty($s['archivo_diseno_nombre']))
+                                    <div class="mt-1">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[11px]">
+                                            Diseño: {{ $s['archivo_diseno_nombre'] }}
+                                        </span>
+                                    </div>
+                                @endif
                             </td>
+
 
                             {{-- Cantidad --}}
                             <td class="px-4 py-2">
@@ -688,19 +704,73 @@
                             </td>
 
 
-                            {{-- Acciones --}}
-                            <td class="px-4 py-2 text-sm text-right">
-                                <div class="flex flex-col space-y-1 items-end">
-                                    <button wire:click="editarServicio({{ $i }})"
-                                            class="text-indigo-600 hover:underline">Editar</button>
-                                    <button wire:click="eliminarServicio({{ $i }})"
-                                            class="text-red-600 hover:underline">Eliminar</button>
-                                    @if(($s['tipo'] ?? (is_null($s['servicio_id'] ?? null) ? 'personalizado' : 'catalogo')) === 'personalizado')
-                                        <button wire:click="editarEstructuraPersonalizado({{ $i }})"
-                                                class="text-indigo-600 hover:underline">Editar estructura</button>
-                                    @endif
+                            {{-- Acciones (responsive) --}}
+                            {{-- celda Acciones --}}
+                            <td class="px-4 py-2 text-xs md:text-sm text-right align-top w-56 md:w-64">
+                                <div class="flex flex-col items-end gap-1">
+
+                                    {{-- fila 1: Editar / Eliminar (+ opcional Editar estructura) --}}
+                                    <div class="inline-flex items-center gap-3">
+                                        <button wire:click="editarServicio({{ $i }})" class="text-indigo-600 hover:underline">Editar</button>
+                                        <button wire:click="eliminarServicio({{ $i }})" class="text-red-600 hover:underline">Eliminar</button>
+
+                                        @if(($s['tipo'] ?? (is_null($s['servicio_id'] ?? null) ? 'personalizado' : 'catalogo')) === 'personalizado')
+                                            <button wire:click="editarEstructuraPersonalizado({{ $i }})" class="text-indigo-600 hover:underline">
+                                                Editar estructura
+                                            </button>
+                                        @endif
+                                    </div>
+
+                                    {{-- fila 2: Dividir / Agrupar (en una sola línea, pegado a la derecha) --}}
+                                    <div class="inline-flex items-center gap-6 ml-auto whitespace-nowrap">
+                                        <button wire:click="dividirEnUnidades({{ $i }})"
+                                                class="text-slate-700 hover:underline leading-tight">
+                                            Dividir en unidades
+                                        </button>
+
+                                        @if(isset($servicios_pedido[$i+1]))
+                                            <button wire:click="agruparConSiguiente({{ $i }})"
+                                                    class="text-slate-700 hover:underline leading-tight">
+                                                Agrupar con siguiente
+                                            </button>
+                                        @endif
+                                    </div>
+
+                                    {{-- móvil: menú compacto (opcional) --}}
+                                    {{-- <div class="md:hidden">... </div> --}}
+                                    {{-- Móvil: menú compacto --}}
+                                    <div class="sm:hidden">
+                                        <details class="relative">
+                                            <summary class="inline-flex items-center gap-1 px-2 py-1 border rounded-md text-slate-700 cursor-pointer select-none">
+                                                Acciones
+                                                <svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"><path d="M5.8 7.3a1 1 0 011.4 0L10 10.1l2.8-2.8a1 1 0 111.4 1.4l-3.5 3.5a1 1 0 01-1.4 0L5.8 8.7a1 1 0 010-1.4z"/></svg>
+                                            </summary>
+                                            <div class="absolute right-0 mt-1 w-48 bg-white border rounded-lg shadow z-10 p-1">
+                                                <button wire:click="editarServicio({{ $i }})" class="block w-full text-right px-3 py-2 hover:bg-gray-50">Editar</button>
+                                                <button wire:click="eliminarServicio({{ $i }})" class="block w-full text-right px-3 py-2 text-red-600 hover:bg-gray-50">Eliminar</button>
+                                                @if(($s['tipo'] ?? (is_null($s['servicio_id'] ?? null) ? 'personalizado' : 'catalogo')) === 'personalizado')
+                                                    <button wire:click="editarEstructuraPersonalizado({{ $i }})" class="block w-full text-right px-3 py-2 hover:bg-gray-50">
+                                                        Editar estructura
+                                                    </button>
+                                                @endif
+                                                <div class="my-1 border-t"></div>
+                                                <button wire:click="dividirEnUnidades({{ $i }})" class="block w-full text-right px-3 py-2 hover:bg-gray-50">
+                                                    Dividir en unidades
+                                                </button>
+                                                @if(isset($servicios_pedido[$i+1]))
+                                                    <button wire:click="agruparConSiguiente({{ $i }})" class="block w-full text-right px-3 py-2 hover:bg-gray-50">
+                                                        Agrupar con siguiente
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </details>
+                                    </div>
                                 </div>
                             </td>
+
+
+
+
 
                         </tr>
                     @endforeach
@@ -895,6 +965,7 @@
     </div>
 
     {{-- Modal de edición de servicio --}}
+    {{-- Modal de edición de servicio --}}
     @if ($modal_servicio_abierto)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
             <div class="bg-white w-full max-w-3xl mx-4 rounded-lg shadow-lg p-6 relative z-50 overflow-y-auto max-h-[90vh]">
@@ -915,6 +986,32 @@
                     @endif
                 </h2>
 
+                {{-- Selección de variante (solo catálogo) --}}
+                @if(
+                    (isset($servicios_pedido[$indice_edicion_servicio]['tipo'])
+                        ? $servicios_pedido[$indice_edicion_servicio]['tipo'] === 'catalogo'
+                        : !is_null($servicios_pedido[$indice_edicion_servicio]['servicio_id'] ?? null))
+                    && !empty($insumos_con_variantes)
+                )
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700">Cambiar variante</label>
+                        <select class="w-full mt-1 border-gray-300 rounded-md shadow-sm"
+                                wire:model.defer="modal_variante_id">
+                            <option value="">— Sin variante —</option>
+                            @foreach($insumos_con_variantes as $ins)
+                                @foreach($ins['variantes'] as $v)
+                                    <option value="{{ $v['id'] }}">
+                                        {{ $ins['nombre'] }} —
+                                        {{ collect($v['atributos'])->map(fn($val,$key) => "$key: $val")->implode(', ') }}
+                                    </option>
+                                @endforeach
+                            @endforeach
+                        </select>
+                        @if(!empty($modal_variante_label) && empty($modal_variante_id))
+                            <p class="text-xs text-gray-500 mt-1">Actual: {{ $modal_variante_label }}</p>
+                        @endif
+                    </div>
+                @endif
 
                 {{-- Cantidad --}}
                 <div class="mb-4">
@@ -956,11 +1053,10 @@
                         <textarea wire:model.lazy="modal_justificacion_total"
                                   class="w-full mt-1 border-gray-300 rounded-md shadow-sm"></textarea>
                         @error('modal_justificacion_total')
-                            <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                         @enderror
                     </div>
                 @endif
-
 
                 {{-- Archivo de diseño --}}
                 <div class="mb-6">
@@ -968,8 +1064,8 @@
                         <div class="flex items-center justify-between">
                             <h4 class="font-medium text-slate-800 text-sm sm:text-base">Archivo de diseño</h4>
                             <span class="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                                PDF / CDR • máx 100MB
-                            </span>
+                        PDF / CDR • máx 100MB
+                    </span>
                         </div>
 
                         {{-- Estado actual --}}
@@ -977,13 +1073,9 @@
                             @if ($archivo_diseno)
                                 {{-- Seleccionado (aún no subido) --}}
                                 <div class="flex flex-wrap items-center gap-2">
-                                      <span class="inline-flex items-center gap-2 text-xs sm:text-sm bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200">
-                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4 4m0 0l4-4m-4 4V4"/>
-                                        </svg>
-                                        {{ $archivo_diseno->getClientOriginalName() }}
-                                      </span>
-
+                            <span class="inline-flex items-center gap-2 text-xs sm:text-sm bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-200">
+                                {{ $archivo_diseno->getClientOriginalName() }}
+                            </span>
                                     <button type="button"
                                             wire:click="eliminarArchivo"
                                             class="text-red-600 hover:text-red-700 text-xs underline">
@@ -994,19 +1086,15 @@
                             @elseif (!empty($docvar_actual))
                                 {{-- Ya guardado en BD (variante existente) --}}
                                 <div class="flex flex-wrap items-center gap-3">
-                                  <span class="inline-flex items-center gap-2 text-xs sm:text-sm bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200">
-                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M9 12l2 2 4-4M7 12a5 5 0 1010 0 5 5 0 00-10 0z"/>
-                                    </svg>
-                                    {{ $docvar_actual->original_name ?? ($archivo_diseno_nombre ?? 'archivo') }}
-                                  </span>
+                            <span class="inline-flex items-center gap-2 text-xs sm:text-sm bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200">
+                                {{ $docvar_actual->original_name ?? ($archivo_diseno_nombre ?? 'archivo') }}
+                            </span>
 
-                                    <a href="{{ route('docs.variante.descargar', $docvar_actual->id) }}"
-                                       target="_blank"
-                                       class="text-blue-600 hover:text-blue-700 text-xs underline">
+                                    <button type="button"
+                                            class="text-blue-600 hover:text-blue-700 text-xs underline"
+                                            wire:click="descargarDisenoDeVariante({{ $servicios_pedido[$indice_edicion_servicio]['psv_id'] ?? 0 }})">
                                         Descargar
-                                    </a>
+                                    </button>
 
                                     <button type="button"
                                             wire:click="prepararReemplazoDiseno({{ $servicios_pedido[$indice_edicion_servicio]['psv_id'] ?? 0 }})"
@@ -1022,15 +1110,11 @@
                                 </div>
 
                             @elseif (!empty($archivo_diseno_nombre))
-                                {{-- Sólo nombre previo (no hay variante todavía) --}}
+                                {{-- Solo nombre previo (aún sin archivo guardado) --}}
                                 <div class="flex flex-wrap items-center gap-2">
-                                  <span class="inline-flex items-center gap-2 text-xs sm:text-sm bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full border border-amber-200">
-                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 4v16m8-8H4"/>
-                                    </svg>
-                                    {{ $archivo_diseno_nombre }}
-                                  </span>
+                            <span class="inline-flex items-center gap-2 text-xs sm:text-sm bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full border border-amber-200">
+                                {{ $archivo_diseno_nombre }}
+                            </span>
 
                                     <label for="archivo_diseno_input"
                                            class="text-slate-700 hover:text-slate-900 text-xs underline cursor-pointer">
@@ -1063,15 +1147,25 @@
                             </div>
                         </label>
 
-                        {{-- Input oculto: sube de inmediato si la variante ya existe (psv_id > 0) --}}
-                        <input
-                            id="archivo_diseno_input"
-                            type="file"
-                            class="hidden"
-                            accept=".pdf,.cdr,application/pdf,application/vnd.corel-draw"
-                            wire:model="archivo_diseno"
-                            wire:change="subirDisenoVariante({{ $servicios_pedido[$indice_edicion_servicio]['psv_id'] ?? 0 }})"
-                        />
+                        {{-- Input oculto (dos versiones: con y sin psv_id) --}}
+                        @if (!empty($servicios_pedido[$indice_edicion_servicio]['psv_id']))
+                            <input
+                                id="archivo_diseno_input"
+                                type="file"
+                                class="hidden"
+                                accept=".pdf,.cdr,application/pdf,application/vnd.corel-draw"
+                                wire:model="archivo_diseno"
+                                wire:change="subirDisenoVariante({{ $servicios_pedido[$indice_edicion_servicio]['psv_id'] }})"
+                            />
+                        @else
+                            <input
+                                id="archivo_diseno_input"
+                                type="file"
+                                class="hidden"
+                                accept=".pdf,.cdr,application/pdf,application/vnd.corel-draw"
+                                wire:model="archivo_diseno"
+                            />
+                        @endif
 
                         {{-- Progreso de carga Livewire --}}
                         <div wire:loading wire:target="archivo_diseno" class="mt-3">
@@ -1085,18 +1179,18 @@
                         <p class="text-red-500 text-xs mt-2">{{ $message }}</p>
                         @enderror
 
-                        {{-- Aplicar a todas las variantes --}}
+                        {{-- Aplicar a todas las variantes del servicio (si hay servicio_id) --}}
                         @if (!empty($servicios_pedido[$indice_edicion_servicio]['servicio_id'] ?? null))
                             <div class="mt-4 border-t border-slate-200 pt-4">
                                 <label class="flex items-start gap-3 text-sm text-slate-700">
                                     <input type="checkbox" wire:model.defer="aplicar_a_todas"
                                            class="mt-0.5 rounded border-slate-300">
                                     <span>
-                                        Aplicar este archivo a <strong>todas las variantes</strong> de este servicio en el pedido.
-                                        <span class="block text-xs text-slate-500 mt-0.5">
-                                          Se adjuntará el mismo documento a cada variante al guardar.
-                                        </span>
-                                    </span>
+                                Aplicar este archivo a <strong>todas las variantes</strong> de este servicio en el pedido.
+                                <span class="block text-xs text-slate-500 mt-0.5">
+                                    Se adjuntará el mismo documento a cada variante al guardar.
+                                </span>
+                            </span>
                                 </label>
                             </div>
                         @endif
@@ -1113,9 +1207,6 @@
                     });
                 </script>
 
-
-
-
                 {{-- Campos personalizados --}}
                 <div class="mb-4">
                     <h3 class="font-semibold text-gray-800 mb-2">Campos personalizados</h3>
@@ -1127,12 +1218,10 @@
                                     <input type="text" wire:model.lazy="campos_personalizados.{{ $index }}.valor"
                                            class="w-full border-gray-300 rounded-md shadow-sm" />
                                     @break
-
                                 @case('numero')
                                     <input type="number" wire:model.lazy="campos_personalizados.{{ $index }}.valor"
                                            class="w-full border-gray-300 rounded-md shadow-sm" />
                                     @break
-
                                 @case('booleano')
                                     <select wire:model.lazy="campos_personalizados.{{ $index }}.valor"
                                             class="w-full border-gray-300 rounded-md shadow-sm">
@@ -1141,7 +1230,6 @@
                                         <option value="0">No</option>
                                     </select>
                                     @break
-
                                 @case('select')
                                     <select wire:model.lazy="campos_personalizados.{{ $index }}.valor"
                                             class="w-full border-gray-300 rounded-md shadow-sm">
@@ -1170,4 +1258,5 @@
             </div>
         </div>
     @endif
+
 </div>
