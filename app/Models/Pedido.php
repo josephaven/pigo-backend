@@ -103,4 +103,18 @@ class Pedido extends Model
     {
         return $this->belongsTo(MetodoPago::class, 'metodo_pago_id', 'id');
     }
+
+    // Pedido.php
+    public function insumos()
+    {
+        return $this->hasManyThrough(
+            PedidoInsumo::class,
+            PedidoServicioVariante::class,
+            'pedido_id',                   // FK en pedido_servicio_variante
+            'pedido_servicio_variante_id', // FK en pedido_insumo
+            'id',
+            'id'
+        );
+    }
+
 }

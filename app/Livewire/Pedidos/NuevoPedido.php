@@ -24,6 +24,7 @@ use App\Services\DocumentoService;
 use App\Models\ComprobantePedido;
 use App\Models\ComprobanteVariante;
 use Illuminate\Support\Facades\Storage;
+use App\Services\InventoryConsumptionService;
 
 
 
@@ -562,8 +563,6 @@ class NuevoPedido extends Component
     }
 
 
-
-
     public function guardar()
     {
         // 0) Al menos una línea/variante
@@ -572,7 +571,7 @@ class NuevoPedido extends Component
             return;
         }
 
-        // 1) Valida reglas dinámicas
+        // 1) Validación
         $this->validate();
 
         // 2) Alta de cliente nuevo (si aplica)
@@ -590,8 +589,12 @@ class NuevoPedido extends Component
             $this->toastJs('success', 'Cliente nuevo registrado correctamente');
         }
 
-        // 3) Persistencia
-        DB::transaction(function () {
+        // Variables para ajustes en EDICIÓN
+        $consumoAntes = collect();
+        $oldSucursal  = null;
+
+        // 3) Persistencia (crear o reconstruir)
+        DB::transaction(function () use (&$consumoAntes, &$oldSucursal) {
             $data = [
                 'cliente_id'              => $this->cliente_id,
                 'sucursal_registro_id'    => $this->sucursal_registro_id,
@@ -607,16 +610,20 @@ class NuevoPedido extends Component
 
             $docs = app(\App\Services\DocumentoService::class);
 
-            /* ===========================
-             * MODO EDICIÓN (reconstruye)
-             * =========================== */
             if ($this->modo_edicion && $this->pedido_id) {
+                // ====== EDICIÓN ======
                 $pedido = Pedido::with('variantes.insumos','variantes.respuestasCampos')
                     ->findOrFail($this->pedido_id);
 
+                // Captura estado ANTES y sucursal anterior
+                $inv          = app(InventoryConsumptionService::class);
+                $consumoAntes = $inv->consumoAgrupado($pedido->id);
+                $oldSucursal  = (int) $pedido->sucursal_elaboracion_id;
+
+                // Actualiza pedido
                 $pedido->update($data);
 
-                // Borra variantes e hijos y vuelve a recrear
+                // Limpia y reconstruye
                 foreach ($pedido->variantes as $v) {
                     $v->insumos()->delete();
                     $v->respuestasCampos()->delete();
@@ -624,22 +631,22 @@ class NuevoPedido extends Component
                 }
 
                 foreach ($this->servicios_pedido as $i => $servicio) {
-                    // Atributos si es personalizado
-                    $atributos = null;
+                    // Atributos del PSV si es personalizado
+                    $atributosPsv = null;
                     if (($servicio['tipo'] ?? '') === 'personalizado') {
-                        $atributos = [
+                        $atributosPsv = [
                             'campos_def'            => $servicio['campos_def']            ?? [],
                             'campos_personalizados' => $servicio['campos_personalizados'] ?? [],
                         ];
                     }
 
-                    $variante = PedidoServicioVariante::create([
+                    $psv = PedidoServicioVariante::create([
                         'pedido_id'            => $pedido->id,
                         'servicio_id'          => $servicio['servicio_id'],
                         'nombre_personalizado' => ($servicio['tipo'] ?? '') === 'personalizado'
                             ? ($servicio['nombre'] ?? null) : null,
                         'descripcion'          => $servicio['descripcion'] ?? null,
-                        'atributos'            => $atributos,
+                        'atributos'            => $atributosPsv,
                         'cantidad'             => $servicio['cantidad'] ?? 1,
                         'precio_unitario'      => $servicio['precio_unitario'],
                         'subtotal'             => $servicio['subtotal'],
@@ -649,41 +656,79 @@ class NuevoPedido extends Component
                         'estado'               => 'en_espera',
                     ]);
 
-                    // 👉 Actualiza el psv_id en la fila UI
-                    $this->servicios_pedido[$i]['psv_id'] = $variante->id;
+                    $this->servicios_pedido[$i]['psv_id'] = $psv->id;
 
-                    // Subir archivo pendiente de esta línea, si hay
                     if (!empty($servicio['archivo_diseno']) && $servicio['archivo_diseno'] instanceof \Illuminate\Http\UploadedFile) {
-                        $docs->subirParaVariante($variante->id, 'archivo_diseno', $servicio['archivo_diseno']);
-                        // Asegura nombre visible
+                        $docs->subirParaVariante($psv->id, 'archivo_diseno', $servicio['archivo_diseno']);
                         $this->servicios_pedido[$i]['archivo_diseno_nombre'] = $servicio['archivo_diseno']->getClientOriginalName();
-                        $variante->update(['nota_disenio' => $this->servicios_pedido[$i]['archivo_diseno_nombre']]);
+                        $psv->update(['nota_disenio' => $this->servicios_pedido[$i]['archivo_diseno_nombre']]);
                     }
 
-                    // Hijos: insumos usados (sin/ con variante)
-                    foreach (($servicio['insumos_usados'] ?? []) as $ins) {
-                        $insumoId = $ins['insumo_id'] ?? $ins['id'] ?? null;
-                        if (!$insumoId) continue;
-                        $insumoObj = Insumo::find($insumoId);
-                        $unidad    = $ins['unidad'] ?? ($insumoObj->unidad_medida ?? '');
-                        PedidoInsumo::create([
-                            'pedido_servicio_variante_id' => $variante->id,
-                            'insumo_id'   => $insumoId,
-                            'unidad'      => $unidad,
-                            'cantidad'    => $ins['cantidad'] ?? 1,
-                            'variante_id' => $ins['variante_id'] ?? null,
-                            'atributos'   => !empty($ins['atributos'])
-                                ? (is_string($ins['atributos']) ? $ins['atributos'] : json_encode($ins['atributos']))
-                                : null,
-                        ]);
+                    // === CÁLCULO DE INSUMOS ===
+                    if (($servicio['tipo'] ?? 'catalogo') === 'catalogo') {
+                        // Catálogo: per-unit desde pivot * cantidad del servicio
+                        $srv = \App\Models\Servicio::with('insumos')->find($servicio['servicio_id']);
+                        $cantServicio = (int)($servicio['cantidad'] ?? 1);
+
+                        // Mapa de variantes elegidas en UI por INSUMO (solo id y atributos; NO usamos su cantidad)
+                        $varMap = [];
+                        foreach (($servicio['insumos_usados'] ?? []) as $sel) {
+                            $iid = $sel['insumo_id'] ?? $sel['id'] ?? null;
+                            if ($iid) {
+                                $varMap[$iid] = [
+                                    'variante_id' => $sel['variante_id'] ?? null,
+                                    'atributos'   => $sel['atributos']   ?? null,
+                                ];
+                            }
+                        }
+
+                        foreach ($srv->insumos as $insumoPivot) {
+                            $requerida = (float)$insumoPivot->pivot->cantidad * $cantServicio; // TOTAL a consumir
+                            $unidad    = $insumoPivot->pivot->unidad ?? ($insumoPivot->unidad_medida ?? '');
+
+                            // Variante elegida (si la UI la mandó)
+                            $choice     = $varMap[$insumoPivot->id] ?? null;
+                            $varianteId = $choice['variante_id'] ?? null;
+
+                            // Atributos: UI > DB (variante)
+                            $atributos = $choice['atributos'] ?? null;
+                            if (!$atributos && $varianteId) {
+                                $atributos = \App\Models\VarianteInsumo::find($varianteId)?->atributos;
+                            }
+
+                            PedidoInsumo::create([
+                                'pedido_servicio_variante_id' => $psv->id,
+                                'insumo_id'   => $insumoPivot->id,
+                                'unidad'      => $unidad,
+                                'cantidad'    => $requerida,   // TOTAL (no se vuelve a multiplicar en consumo)
+                                'variante_id' => $varianteId,  // respeta variante
+                                'atributos'   => $atributos,   // se guardará como JSON si tienes cast
+                            ]);
+                        }
+                    } else {
+                        // Personalizado: tomar TOTAL desde UI (sin multiplicar) y respetar variante/atributos
+                        foreach (($servicio['insumos_usados'] ?? []) as $ins) {
+                            $insumoId = $ins['insumo_id'] ?? $ins['id'] ?? null;
+                            if (!$insumoId) continue;
+                            $insumoObj = Insumo::find($insumoId);
+                            $unidad    = $ins['unidad'] ?? ($insumoObj->unidad_medida ?? '');
+                            PedidoInsumo::create([
+                                'pedido_servicio_variante_id' => $psv->id,
+                                'insumo_id'   => $insumoId,
+                                'unidad'      => $unidad,
+                                'cantidad'    => (float)($ins['cantidad'] ?? 1), // TOTAL
+                                'variante_id' => $ins['variante_id'] ?? null,
+                                'atributos'   => $ins['atributos'] ?? null,
+                            ]);
+                        }
                     }
 
-                    // Hijos: respuestas de campos personalizados (catálogo)
+                    // Campos personalizados (si hay)
                     foreach (($servicio['campos_personalizados'] ?? []) as $c) {
                         $campoId = $c['id'] ?? null;
                         if (!$campoId) continue;
                         RespuestaCampoPedido::create([
-                            'pedido_servicio_variante_id' => $variante->id,
+                            'pedido_servicio_variante_id' => $psv->id,
                             'campo_personalizado_id'      => $campoId,
                             'valor'                        => is_array($c['valor'] ?? null)
                                 ? json_encode($c['valor'])
@@ -708,102 +753,142 @@ class NuevoPedido extends Component
                     if ($existente) $existente->delete();
                 }
 
-                return; // fin edición
-            }
+            } else {
+                // ====== CREACIÓN ======
+                $pedido = Pedido::create($data);
+                $this->pedido_id = $pedido->id;
+                $this->refrescarComprobantes();
 
-            /* ===============
-             * CREACIÓN
-             * =============== */
-            $pedido = Pedido::create($data);
-            $this->pedido_id = $pedido->id;
-            $this->refrescarComprobantes();
+                foreach ($this->servicios_pedido as $i => $servicio) {
+                    $atributosPsv = null;
+                    if (($servicio['tipo'] ?? '') === 'personalizado') {
+                        $atributosPsv = [
+                            'campos_def'            => $servicio['campos_def']            ?? [],
+                            'campos_personalizados' => $servicio['campos_personalizados'] ?? [],
+                        ];
+                    }
 
-            foreach ($this->servicios_pedido as $i => $servicio) {
-                $atributos = null;
-                if (($servicio['tipo'] ?? '') === 'personalizado') {
-                    $atributos = [
-                        'campos_def'            => $servicio['campos_def']            ?? [],
-                        'campos_personalizados' => $servicio['campos_personalizados'] ?? [],
-                    ];
+                    $psv = PedidoServicioVariante::create([
+                        'pedido_id'            => $pedido->id,
+                        'servicio_id'          => $servicio['servicio_id'],
+                        'nombre_personalizado' => ($servicio['tipo'] ?? '') === 'personalizado'
+                            ? ($servicio['nombre'] ?? null) : null,
+                        'descripcion'          => $servicio['descripcion'] ?? null,
+                        'atributos'            => $atributosPsv,
+                        'cantidad'             => $servicio['cantidad'] ?? 1,
+                        'precio_unitario'      => $servicio['precio_unitario'],
+                        'subtotal'             => $servicio['subtotal'],
+                        'total_final'          => $servicio['total_final'] ?? null,
+                        'justificacion_total'  => $servicio['justificacion_total'] ?? null,
+                        'nota_disenio'         => $servicio['archivo_diseno_nombre'] ?? null,
+                        'estado'               => 'en_espera',
+                    ]);
+
+                    $this->servicios_pedido[$i]['psv_id'] = $psv->id;
+
+                    if (!empty($servicio['archivo_diseno']) && $servicio['archivo_diseno'] instanceof \Illuminate\Http\UploadedFile) {
+                        $docs->subirParaVariante($psv->id, 'archivo_diseno', $servicio['archivo_diseno']);
+                        $this->servicios_pedido[$i]['archivo_diseno_nombre'] = $servicio['archivo_diseno']->getClientOriginalName();
+                        $psv->update(['nota_disenio' => $this->servicios_pedido[$i]['archivo_diseno_nombre']]);
+                    }
+
+                    // === CÁLCULO DE INSUMOS ===
+                    if (($servicio['tipo'] ?? 'catalogo') === 'catalogo') {
+                        $srv = \App\Models\Servicio::with('insumos')->find($servicio['servicio_id']);
+                        $cantServicio = (int)($servicio['cantidad'] ?? 1);
+
+                        // Mapa de variantes elegidas en UI
+                        $varMap = [];
+                        foreach (($servicio['insumos_usados'] ?? []) as $sel) {
+                            $iid = $sel['insumo_id'] ?? $sel['id'] ?? null;
+                            if ($iid) {
+                                $varMap[$iid] = [
+                                    'variante_id' => $sel['variante_id'] ?? null,
+                                    'atributos'   => $sel['atributos']   ?? null,
+                                ];
+                            }
+                        }
+
+                        foreach ($srv->insumos as $insumoPivot) {
+                            $requerida = (float)$insumoPivot->pivot->cantidad * $cantServicio;
+                            $unidad    = $insumoPivot->pivot->unidad ?? ($insumoPivot->unidad_medida ?? '');
+
+                            $choice     = $varMap[$insumoPivot->id] ?? null;
+                            $varianteId = $choice['variante_id'] ?? null;
+                            $atributos  = $choice['atributos'] ?? null;
+                            if (!$atributos && $varianteId) {
+                                $atributos = \App\Models\VarianteInsumo::find($varianteId)?->atributos;
+                            }
+
+                            PedidoInsumo::create([
+                                'pedido_servicio_variante_id' => $psv->id,
+                                'insumo_id'   => $insumoPivot->id,
+                                'unidad'      => $unidad,
+                                'cantidad'    => $requerida, // TOTAL
+                                'variante_id' => $varianteId,
+                                'atributos'   => $atributos,
+                            ]);
+                        }
+                    } else {
+                        foreach (($servicio['insumos_usados'] ?? []) as $ins) {
+                            $insumoId = $ins['insumo_id'] ?? $ins['id'] ?? null;
+                            if (!$insumoId) continue;
+                            $insumoObj = Insumo::find($insumoId);
+                            $unidad    = $ins['unidad'] ?? ($insumoObj->unidad_medida ?? '');
+                            PedidoInsumo::create([
+                                'pedido_servicio_variante_id' => $psv->id,
+                                'insumo_id'   => $insumoId,
+                                'unidad'      => $unidad,
+                                'cantidad'    => (float)($ins['cantidad'] ?? 1), // TOTAL
+                                'variante_id' => $ins['variante_id'] ?? null,
+                                'atributos'   => $ins['atributos'] ?? null,
+                            ]);
+                        }
+                    }
+
+                    // Campos personalizados
+                    foreach (($servicio['campos_personalizados'] ?? []) as $c) {
+                        $campoId = $c['id'] ?? null;
+                        if (!$campoId) continue;
+                        RespuestaCampoPedido::create([
+                            'pedido_servicio_variante_id' => $psv->id,
+                            'campo_personalizado_id'      => $campoId,
+                            'valor'                        => is_array($c['valor'] ?? null)
+                                ? json_encode($c['valor'])
+                                : ($c['valor'] ?? ''),
+                        ]);
+                    }
                 }
 
-                $variante = PedidoServicioVariante::create([
-                    'pedido_id'            => $pedido->id,
-                    'servicio_id'          => $servicio['servicio_id'],
-                    'nombre_personalizado' => ($servicio['tipo'] ?? '') === 'personalizado'
-                        ? ($servicio['nombre'] ?? null) : null,
-                    'descripcion'          => $servicio['descripcion'] ?? null,
-                    'atributos'            => $atributos,
-                    'cantidad'             => $servicio['cantidad'] ?? 1,
-                    'precio_unitario'      => $servicio['precio_unitario'],
-                    'subtotal'             => $servicio['subtotal'],
-                    'total_final'          => $servicio['total_final'] ?? null,
-                    'justificacion_total'  => $servicio['justificacion_total'] ?? null,
-                    'nota_disenio'         => $servicio['archivo_diseno_nombre'] ?? null,
-                    'estado'               => 'en_espera',
-                ]);
-
-                // ✅ refleja psv_id en la fila UI recién creada
-                $this->servicios_pedido[$i]['psv_id'] = $variante->id;
-
-                // Subir archivo de la fila (si lo había en memoria)
-                if (!empty($servicio['archivo_diseno']) && $servicio['archivo_diseno'] instanceof \Illuminate\Http\UploadedFile) {
-                    $docs->subirParaVariante($variante->id, 'archivo_diseno', $servicio['archivo_diseno']);
-                    // nombre visible
-                    $this->servicios_pedido[$i]['archivo_diseno_nombre'] = $servicio['archivo_diseno']->getClientOriginalName();
-                    $variante->update(['nota_disenio' => $this->servicios_pedido[$i]['archivo_diseno_nombre']]);
-                }
-
-                // Hijos: insumos usados
-                foreach (($servicio['insumos_usados'] ?? []) as $ins) {
-                    $insumoId = $ins['insumo_id'] ?? $ins['id'] ?? null;
-                    if (!$insumoId) continue;
-                    $insumoObj = Insumo::find($insumoId);
-                    $unidad    = $ins['unidad'] ?? ($insumoObj->unidad_medida ?? '');
-                    PedidoInsumo::create([
-                        'pedido_servicio_variante_id' => $variante->id,
-                        'insumo_id'   => $insumoId,
-                        'unidad'      => $unidad,
-                        'cantidad'    => $ins['cantidad'] ?? 1,
-                        'variante_id' => $ins['variante_id'] ?? null,
-                        'atributos'   => !empty($ins['atributos'])
-                            ? (is_string($ins['atributos']) ? $ins['atributos'] : json_encode($ins['atributos']))
-                            : null,
+                if ($this->requiere_factura) {
+                    FacturaPedido::create([
+                        'pedido_id'    => $pedido->id,
+                        'rfc'          => $this->rfc,
+                        'razon_social' => $this->razon_social,
+                        'direccion'    => $this->direccion_fiscal,
+                        'uso_cfdi'     => $this->uso_cfdi,
+                        'metodo_pago'  => $this->metodo_pago_factura,
                     ]);
                 }
+            }
+        }); // fin transaction
 
-                // Hijos: respuestas de campos personalizados (catálogo)
-                foreach (($servicio['campos_personalizados'] ?? []) as $c) {
-                    $campoId = $c['id'] ?? null;
-                    if (!$campoId) continue;
-                    RespuestaCampoPedido::create([
-                        'pedido_servicio_variante_id' => $variante->id,
-                        'campo_personalizado_id'      => $campoId,
-                        'valor'                        => is_array($c['valor'] ?? null)
-                            ? json_encode($c['valor'])
-                            : ($c['valor'] ?? ''),
-                    ]);
+        // 4) Inventario: creación vs edición
+        if ($this->modo_edicion && $this->pedido_id) {
+            $pedidoRefrescado = Pedido::find($this->pedido_id);
+            app(InventoryConsumptionService::class)->ajustarPorEdicion($pedidoRefrescado, $consumoAntes, (int) $oldSucursal);
+        } else {
+            if ($this->pedido_id) {
+                $pedido = Pedido::find($this->pedido_id);
+                if ($pedido && $pedido->sucursal_elaboracion_id) {
+                    app(InventoryConsumptionService::class)->consumirDesdePedido($pedido);
                 }
             }
-
-            // Factura (si procede)
-            if ($this->requiere_factura) {
-                FacturaPedido::create([
-                    'pedido_id'    => $pedido->id,
-                    'rfc'          => $this->rfc,
-                    'razon_social' => $this->razon_social,
-                    'direccion'    => $this->direccion_fiscal,
-                    'uso_cfdi'     => $this->uso_cfdi,
-                    'metodo_pago'  => $this->metodo_pago_factura,
-                ]);
-            }
-        });
+        }
 
         session()->flash('mensaje', $this->modo_edicion ? 'Pedido actualizado correctamente' : 'Pedido creado correctamente');
         return redirect()->route('pedidos');
     }
-
-
 
 
 
